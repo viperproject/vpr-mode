@@ -1,0 +1,24 @@
+* viperlanguage-mode
+[[https://www.pm.inf.ethz.ch/research/viper.html][Viper]] language support for Emacs.
+
+** Installation
+
+This package is under heavy development does not support all Viper features. Thus, it is not published in any package archives.
+
+For the moment, the package uses viper through silicon with the default arguments.
+
+To install it, one must clone the repository:
+
+#+BEGIN_SRC shell
+  git clone git@github.com:Dspil/viperlanguage-mode.git
+#+END_SRC
+
+Then, add the following lines in your init.el.
+
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'load-path "<viperlanguage-mode path>")
+
+  (use-package viperlanguage-mode)
+
+  (setq viperlanguage-viper-path "<viper path>")
+#+END_SRC

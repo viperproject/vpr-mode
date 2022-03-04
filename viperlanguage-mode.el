@@ -132,9 +132,7 @@
       (indent-line-to (* (+ curindent fix) viperlanguage-default-tab-width)))))
 
 ;;; make requests to server
-(setq viperlanguage-viper-path "/home/shit/ViperToolsLinux/")
-(setq viperlanguage-viperserver (concat (file-name-as-directory viperlanguage-viper-path) "backends/viperserver.jar"))
-(setq viperlanguage-z3-path (concat (file-name-as-directory viperlanguage-viper-path) "z3/bin/z3"))
+(setq viperlanguage-viper-path nil)
 (setq viperlanguage-server-port nil)
 (setq viperlanguage-async-timer nil)
 (setq viperlanguage-async-buffer nil)
@@ -161,17 +159,18 @@
 (defun viperlanguage-start-server ()
   (interactive)
   (when (not viperlanguage-server-port)
-    (setq b (format "%s" (async-shell-command (format "java -jar %s" viperlanguage-viperserver))))
-    (string-match "window [1234567890]* on \\(.*\\)>" b)
-    (setq viperlanguage-async-buffer (match-string 1 b))
-    (setq viperlanguage-async-timer (run-with-timer 1 1 'viperlanguage-read-async))))
+    (let ((viperlanguage-viperserver (concat (file-name-as-directory viperlanguage-viper-path) "backends/viperserver.jar")))
+      (setq b (format "%s" (async-shell-command (format "java -jar %s" viperlanguage-viperserver))))
+      (string-match "window [1234567890]* on \\(.*\\)>" b)
+      (setq viperlanguage-async-buffer (match-string 1 b))
+      (setq viperlanguage-async-timer (run-with-timer 1 1 'viperlanguage-read-async)))))
 
 (defun viperlanguage-stop-server ()
   (interactive)
   (when viperlanguage-server-port
     (request (viperlanguage-request-url "exit")
-    (setq viperlanguage-server-port nil)
-    (setq viperlanguage-async-timer nil))))
+      (setq viperlanguage-server-port nil)
+      (setq viperlanguage-async-timer nil))))
 
 (defun viperlanguage-verify ()
   (interactive)
@@ -180,7 +179,8 @@
     (message "No active viper server!")))
 
 (defun viperlanguage-verify-file (file-path buffer)
-  (request (viperlanguage-request-url "verify")
+  (let ((viperlanguage-z3-path (concat (file-name-as-directory viperlanguage-viper-path) "z3/bin/z3")))
+    (request (viperlanguage-request-url "verify")
       :type "POST"
       :data (json-encode
              (cons
@@ -193,7 +193,7 @@
       :success (cl-function
                 (lambda (&key data &allow-other-keys)
                   (let ((id (cdr (assoc 'id data))))
-                    (viperlanguage-get-verification id buffer))))))
+                    (viperlanguage-get-verification id buffer)))))))
 
 (defun viperlanguage-get-verification (id buffer)
   (request (concat (viperlanguage-request-url "verify") (format "/%s" id))
@@ -201,19 +201,19 @@
     :success (cl-function
               (lambda (&key data &allow-other-keys)
                 (let ((filtered
-                        (-filter
+                       (-filter
+                        (lambda (a)
+                          (let ((msgt (format "%s" (alist-get 'msg_type a))))
+                            (or
+                             (equal msgt "verification_result")
+                             (equal msgt "ast_construction_result"))))
+                        (mapcar
                          (lambda (a)
-                           (let ((msgt (format "%s" (alist-get 'msg_type a))))
-                             (or
-                              (equal msgt "verification_result")
-                              (equal msgt "ast_construction_result"))))
-                         (mapcar
-                          (lambda (a)
-                            (json-parse-string
-                             a
-                             :object-type 'alist
-                             :array-type 'list))
-                          (split-string data "\n")))))
+                           (json-parse-string
+                            a
+                            :object-type 'alist
+                            :array-type 'list))
+                         (split-string data "\n")))))
                   (mapc (lambda (r) 
                           (viperlanguage-parse-results r buffer))
                         filtered))))))
@@ -261,8 +261,8 @@
 (defun viperlanguage-use-ast-results (status errors buffer)
   (with-current-buffer buffer
     (when (equal (format "%s" status) "failure")
-        (message "AST construction failed.")
-        (mapc (lambda (err) (viperlanguage-handle-ast-error err buffer)) errors))))
+      (message "AST construction failed.")
+      (mapc (lambda (err) (viperlanguage-handle-ast-error err buffer)) errors))))
 
 (defun viperlanguage-handle-ast-error (err buffer)
   (with-current-buffer buffer
