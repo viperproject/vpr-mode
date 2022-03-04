@@ -123,7 +123,7 @@
 	  (while beg
 	    (forward-line -1)
 	    (setq curindent (+ curindent (viperlanguage-count-braces)))
-	    (setq beg (and (not (bobp)) (not (eq (current-indentation) 0)))))
+	    (setq beg (or (looking-at "[ \t]*\n") (and (not (bobp)) (not (eq (current-indentation) 0))))))
 	  (when (< curindent 0)
 	    (setq curindent 0))))
       (if (> (viperlanguage-count-braces) 0)
