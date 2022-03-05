@@ -141,6 +141,7 @@
 
 ;; viperserver options
 (setq viperlanguage-backend "silicon")
+(setq viperlanguage-backend-options "--disableCaching --z3Exe=/home/shit/ViperToolsLinux/z3/bin/z3")
 
 (defun viperlanguage-request-url (cmd)
   (format "http://localhost:%s/%s" viperlanguage-server-port cmd))
@@ -174,26 +175,26 @@
 
 (defun viperlanguage-verify ()
   (interactive)
-  (if viperlanguage-server-port
-      (viperlanguage-verify-file buffer-file-name (current-buffer))
-    (message "No active viper server!")))
+  (when (eq major-mode 'viperlanguage-mode)
+    (if viperlanguage-server-port
+        (viperlanguage-verify-file buffer-file-name (current-buffer))
+      (message "No active viper server!"))))
 
 (defun viperlanguage-verify-file (file-path buffer)
-  (let ((viperlanguage-z3-path (concat (file-name-as-directory viperlanguage-viper-path) "z3/bin/z3")))
-    (request (viperlanguage-request-url "verify")
-      :type "POST"
-      :data (json-encode
-             (cons
-              (cons "arg"
-                    (format
-                     "silicon --disableCaching --z3Exe=%s \"%s\""
-                     viperlanguage-z3-path file-path)) ()))
-      :headers '(("Content-Type" . "application/json"))
-      :parser 'json-read
-      :success (cl-function
-                (lambda (&key data &allow-other-keys)
-                  (let ((id (cdr (assoc 'id data))))
-                    (viperlanguage-get-verification id buffer)))))))
+  (request (viperlanguage-request-url "verify")
+    :type "POST"
+    :data (json-encode
+           (cons
+            (cons "arg"
+                  (format
+                   "%s %s \"%s\""
+                   viperlanguage-backend viperlanguage-backend-options file-path)) ()))
+    :headers '(("Content-Type" . "application/json"))
+    :parser 'json-read
+    :success (cl-function
+              (lambda (&key data &allow-other-keys)
+                (let ((id (cdr (assoc 'id data))))
+                  (viperlanguage-get-verification id buffer))))))
 
 (defun viperlanguage-get-verification (id buffer)
   (request (concat (viperlanguage-request-url "verify") (format "/%s" id))
