@@ -56,6 +56,18 @@
   "Viperlanguage face for errors."
   :group 'viperlanguage-faces)
 
+(defface viperlanguage-verified-face
+  '((t (:weight bold :foreground "Green")))
+  "The face used to highlight succesful verification.")
+
+(defface viperlanguage-unverified-face
+  '((t (:weight bold :foreground "Red")))
+  "The face used to highlight failed verification.")
+
+(defface viperlanguage-notran-face
+  '((t (:weight bold :foreground "Orange")))
+  "The face used to highlight not run verification.")
+
 ;; define several category of keywords
 (setq viperlanguage-keywords '("method" "while" "var" "import" "function" "predicate" "field" "if" "else" "returns"))
 (setq viperlanguage-types '("Ref" "Bool" "Int" "Rational" "Perm" "Seq" "Set" "Multiset"))
@@ -95,6 +107,8 @@
 (setq viperlanguage-events-regexp nil)
 (setq viperlanguage-functions-regexp nil)
 
+(setq-local viperlanguage-is-verified nil)
+(setq-default viperlanguage-is-verified nil)
 ;; indentation
 (setq viperlanguage-default-tab-width 4)
 (defun viperlanguage-count-braces ()
@@ -178,6 +192,7 @@
   (when (eq major-mode 'viperlanguage-mode)
     (if viperlanguage-server-port
         (viperlanguage-verify-file buffer-file-name (current-buffer))
+      (setq viperlanguage-is-verified nil)
       (message "No active viper server!"))))
 
 (defun viperlanguage-verify-file (file-path buffer)
@@ -234,7 +249,10 @@
 (defun viperlanguage-use-error-results (status errors buffer)
   (with-current-buffer buffer
     (if (equal (format "%s" status) "success")
-        (message "Program verified succesfully.")
+        (progn 
+          (message "Program verified succesfully.")
+          (setq viperlanguage-is-verified 1))
+      (setq viperlanguage-is-verified 2)
       (mapc (lambda (err) (viperlanguage-handle-error err buffer)) errors))))
 
 (defun viperlanguage-handle-error (err buffer)
@@ -279,6 +297,14 @@
         (overlay-put ov 'help-echo text)))))
 
 
+(defun viperlanguage-mode-line ()
+  (if (equal major-mode 'viperlanguage-mode)
+      (if (not viperlanguage-is-verified)
+          (concat "[" (propertize "Unknown" 'face 'viperlanguage-notran-face) "]")
+        (if (equal viperlanguage-is-verified 1)
+            (concat "[" (propertize "Verified" 'face 'viperlanguage-verified-face) "]")
+          (concat "[" (propertize "Unverified" 'face 'viperlanguage-unverified-face) "]")))
+    ""))
 ;;;###autoload
 
 (defvar viperlanguage-mode-map nil "Keymap for viperlanguage-mode.")
@@ -294,7 +320,10 @@
   "Major mode for editing Viper"
   (setq font-lock-defaults '((viperlanguage-font-lock-keywords)))
   (setq-local indent-line-function #'viperlanguage-indent-line)
-  (cursor-sensor-mode))
+  (cursor-sensor-mode)
+  (setq global-mode-string (or global-mode-string '("")))
+  (unless (member '(:eval (viperlanguage-mode-line)) global-mode-string)
+    (setq global-mode-string (append global-mode-string '((:eval (viperlanguage-mode-line)))))))
 
 (add-to-list 'auto-mode-alist '("\\.vpr" . viperlanguage-mode))
 
