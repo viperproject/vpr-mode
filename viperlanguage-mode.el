@@ -28,10 +28,17 @@
 
 ;;; Code:
 
-;; local variables
+;; Variables
 
-(setq-local viperlanguage-highlight-overlays nil)
-(setq-default viperlanguage-highlight-overlays nil)
+(defvar-local viperlanguage-highlight-overlays nil "Highglight overlays of errors reported by Viper.")
+(defvar-local viperlanguage-is-verified nil "Holds the status of the program regarding its verification by Viper.")
+(defvar viperlanguage-viper-path nil "The location of Viper.")
+(defvar viperlanguage-server-port nil "Holds the port where the Viper server is listening.")
+(defvar viperlanguage-default-tab-width 4 "Space-tab equivalence in a Viper program.")
+(defvar viperlanguage-async-buffer nil "The buffer in which Viper server is running.")
+(defvar viperlanguage-async-timer nil "Holds the timer of the function ran to identify the Viper server port.")
+(defvar-local viperlanguage-backend "silicon" "The backend that should be used by Viper.")
+(defvar-local viperlanguage-backend-options "--disableCaching --z3Exe=/home/shit/ViperToolsLinux/z3/bin/z3" "The backend options that Viper should use.")
 
 ;; helper functions
 (defun viperlanguage-pos-at-line-col (lc buffer)
@@ -107,10 +114,8 @@
 (setq viperlanguage-events-regexp nil)
 (setq viperlanguage-functions-regexp nil)
 
-(setq-local viperlanguage-is-verified nil)
-(setq-default viperlanguage-is-verified nil)
+
 ;; indentation
-(setq viperlanguage-default-tab-width 4)
 (defun viperlanguage-count-braces ()
   (let ((s (thing-at-point 'line t))
 	(i 0)
@@ -146,16 +151,11 @@
       (indent-line-to (* (+ curindent fix) viperlanguage-default-tab-width)))))
 
 ;;; make requests to server
-(setq viperlanguage-viper-path nil)
-(setq viperlanguage-server-port nil)
-(setq viperlanguage-async-timer nil)
-(setq viperlanguage-async-buffer nil)
-(setq viperlanguage-assoc-files nil)
 
 
-;; viperserver options
-(setq viperlanguage-backend "silicon")
-(setq viperlanguage-backend-options "--disableCaching --z3Exe=/home/shit/ViperToolsLinux/z3/bin/z3")
+
+;; viperserver 
+
 
 (defun viperlanguage-request-url (cmd)
   (format "http://localhost:%s/%s" viperlanguage-server-port cmd))
@@ -192,7 +192,7 @@
   (when (eq major-mode 'viperlanguage-mode)
     (if viperlanguage-server-port
         (viperlanguage-verify-file buffer-file-name (current-buffer))
-      (setq viperlanguage-is-verified nil)
+      (setq-local viperlanguage-is-verified nil)
       (message "No active viper server!"))))
 
 (defun viperlanguage-verify-file (file-path buffer)
@@ -251,8 +251,8 @@
     (if (equal (format "%s" status) "success")
         (progn 
           (message "Program verified succesfully.")
-          (setq viperlanguage-is-verified 1))
-      (setq viperlanguage-is-verified 2)
+          (setq-local viperlanguage-is-verified 1))
+      (setq-local viperlanguage-is-verified 2)
       (mapc (lambda (err) (viperlanguage-handle-error err buffer)) errors))))
 
 (defun viperlanguage-handle-error (err buffer)
