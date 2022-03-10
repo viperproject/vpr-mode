@@ -3,7 +3,7 @@
 
 ** Installation
 
-This package is under heavy development does not support all Viper features. Thus, it is not published in any package archives.
+This package is under heavy development and does not support all Viper features. Thus, it is not published in any package archives.
 
 For the moment, the package uses viper through silicon with the default arguments.
 
