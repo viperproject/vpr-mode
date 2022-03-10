@@ -6,7 +6,7 @@
 ;; Keywords: lisp
 ;; Version: 0.0.1
 ;; URL: https://github.com/Dspil/viperlanguage-mode
-;; Package-Requires: ((emacs "26.2") (request "20211107.1907"))
+;; Package-Requires: ((emacs "27.1") (request "0.3.2"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -54,7 +54,8 @@
 
 ;; faces
 (defgroup viperlanguage-faces nil
-  "Viperlanguage highlight faces.")
+  "Viperlanguage highlight faces."
+  :group 'tools)
 
 (defface viperlanguage-error
   '((((supports :underline (:style wave)))
@@ -99,7 +100,7 @@
         (,viperlanguage-event-regexp . font-lock-builtin-face)
         (,viperlanguage-functions-regexp . font-lock-function-name-face)
         (,viperlanguage-keywords-regexp . font-lock-keyword-face)
-	("//.*\n" . font-lock-comment-face)))
+	      ("//.*\n" . font-lock-comment-face)))
 
 ;; clear memory. no longer needed
 (setq viperlanguage-keywords nil)
@@ -120,13 +121,13 @@
 (defun viperlanguage-count-braces ()
   "Return a number that corresponds to how many more curly braces or parentheses have been opened than closed in the current line."
   (let ((s (thing-at-point 'line t))
-	(i 0)
-	(res 0))
+	      (i 0)
+	      (res 0))
     (while (< i (length s))
       (when (or (eq (aref s i) ?}) (eq (aref s i) ?\)))
-	(setq res (1- res)))
+	      (setq res (1- res)))
       (when (or (eq (aref s i) ?{) (eq (aref s i) ?\())
-	(setq res (1+ res)))
+	      (setq res (1+ res)))
       (setq i (1+ i)))
     res))
 
@@ -135,25 +136,25 @@
   (interactive)
   (save-excursion
     (let ((curindent 0)
-	  (beg t))
+	        (beg t))
       (save-excursion
-	(beginning-of-line)
-	(if (bobp)
-	    (indent-line-to 0)
-	  (setq curindent (+ curindent (viperlanguage-count-braces)))
-	  (while beg
-	    (forward-line -1)
-	    (setq curindent (+ curindent (viperlanguage-count-braces)))
-	    (setq beg (or (looking-at "[ \t]*\n") (and (not (bobp)) (not (eq (current-indentation) 0))))))
-	  (when (< curindent 0)
-	    (setq curindent 0))))
-      (if (> (viperlanguage-count-braces) 0)
-	  (setq fix -1)
-	(setq fix 0))
-      (indent-line-to (* (+ curindent fix) viperlanguage-default-tab-width)))))
+	      (beginning-of-line)
+	      (if (bobp)
+	          (indent-line-to 0)
+	        (setq curindent (+ curindent (viperlanguage-count-braces)))
+	        (while beg
+	          (forward-line -1)
+	          (setq curindent (+ curindent (viperlanguage-count-braces)))
+	          (setq beg (or (looking-at "[ \t]*\n") (and (not (bobp)) (not (eq (current-indentation) 0))))))
+	        (when (< curindent 0)
+	          (setq curindent 0))))
+      (let (fix)
+        (if (> (viperlanguage-count-braces) 0)
+	          (setq fix -1)
+	        (setq fix 0))
+        (indent-line-to (* (+ curindent fix) viperlanguage-default-tab-width))))))
 
 ;;; make requests to server
-
 
 (defun viperlanguage-request-url (cmd)
   "Return the url for a request to the viper server given that we want to execute CMD."
