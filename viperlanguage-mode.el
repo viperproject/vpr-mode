@@ -42,6 +42,7 @@
 
 ;; helper functions
 (defun viperlanguage-pos-at-line-col (lc buffer)
+  "Find the absolute position given by row column in LC in a BUFFER."
   (save-excursion
     (with-current-buffer buffer
       (let ((l (car lc))
@@ -117,6 +118,7 @@
 
 ;; indentation
 (defun viperlanguage-count-braces ()
+  "Return a number that corresponds to how many more curly braces or parentheses have been opened than closed in the current line."
   (let ((s (thing-at-point 'line t))
 	(i 0)
 	(res 0))
@@ -153,17 +155,15 @@
 ;;; make requests to server
 
 
-
-;; viperserver 
-
-
 (defun viperlanguage-request-url (cmd)
+  "Return the url for a request to the viper server given that we want to execute CMD."
   (format "http://localhost:%s/%s" viperlanguage-server-port cmd))
 
 (defun viperlanguage-read-async ()
+  "Try to find the port in which the Viper server is listening."
   (interactive)
   (with-current-buffer viperlanguage-async-buffer
-    (beginning-of-buffer)
+    (goto-char (point-min))
     (while (not (eobp))
       (when (looking-at "ViperServer online at http://localhost:[0123456789]*\n")
         (setq viperlanguage-server-port (substring (thing-at-point 'line t) 39 -1))
@@ -172,15 +172,17 @@
       (forward-line 1))))
 
 (defun viperlanguage-start-server ()
+  "Start a Viper server."
   (interactive)
   (when (not viperlanguage-server-port)
     (let ((viperlanguage-viperserver (concat (file-name-as-directory viperlanguage-viper-path) "backends/viperserver.jar")))
-      (setq b (format "%s" (async-shell-command (format "java -jar %s" viperlanguage-viperserver))))
-      (string-match "window [1234567890]* on \\(.*\\)>" b)
-      (setq viperlanguage-async-buffer (match-string 1 b))
-      (setq viperlanguage-async-timer (run-with-timer 1 1 'viperlanguage-read-async)))))
+      (let ((b (format "%s" (async-shell-command (format "java -jar %s" viperlanguage-viperserver)))))
+        (string-match "window [1234567890]* on \\(.*\\)>" b)
+        (setq viperlanguage-async-buffer (match-string 1 b))
+        (setq viperlanguage-async-timer (run-with-timer 1 1 'viperlanguage-read-async))))))
 
 (defun viperlanguage-stop-server ()
+  "Stop the Viper server."
   (interactive)
   (when viperlanguage-server-port
     (request (viperlanguage-request-url "exit")
@@ -188,6 +190,7 @@
       (setq viperlanguage-async-timer nil))))
 
 (defun viperlanguage-verify ()
+  "Ask the Viper server to verify the file corresponding to the current buffer."
   (interactive)
   (when (eq major-mode 'viperlanguage-mode)
     (if viperlanguage-server-port
@@ -196,6 +199,7 @@
       (message "No active viper server!"))))
 
 (defun viperlanguage-verify-file (file-path buffer)
+  "Verify the file with path FILE-PATH in the buffer BUFFER."
   (request (viperlanguage-request-url "verify")
     :type "POST"
     :data (json-encode
@@ -212,6 +216,7 @@
                   (viperlanguage-get-verification id buffer))))))
 
 (defun viperlanguage-get-verification (id buffer)
+  "Get the verification result for id ID in buffer BUFFER."
   (request (concat (viperlanguage-request-url "verify") (format "/%s" id))
     :type "GET"
     :success (cl-function
@@ -235,6 +240,7 @@
                         filtered))))))
 
 (defun viperlanguage-parse-results (data buffer)
+  "Parse the Viper results in DATA of the buffer BUFFER."
   (with-current-buffer buffer
     (seq-do #'delete-overlay viperlanguage-highlight-overlays)
     (let* ((msg_body (alist-get 'msg_body data))
@@ -247,6 +253,7 @@
         (viperlanguage-use-ast-results status errors buffer)))))
 
 (defun viperlanguage-use-error-results (status errors buffer)
+  "If STATUS is success then the program verified, otherwise parse each error in ERRORS seperately for the file in buffer BUFFER."
   (with-current-buffer buffer
     (if (equal (format "%s" status) "success")
         (progn 
@@ -256,6 +263,7 @@
       (mapc (lambda (err) (viperlanguage-handle-error err buffer)) errors))))
 
 (defun viperlanguage-handle-error (err buffer)
+  "Handle a specific error ERR for the buffer BUFFER."
   (with-current-buffer buffer
     (let* ((position (alist-get 'position err))
            (starts (alist-get 'start position))
@@ -278,12 +286,14 @@
         (message "%s" text)))))
 
 (defun viperlanguage-use-ast-results (status errors buffer)
+  "Handle the ast construction results using the STATUS of the construction and the ERRORS occured for BUFFER."
   (with-current-buffer buffer
     (when (equal (format "%s" status) "failure")
       (message "AST construction failed.")
       (mapc (lambda (err) (viperlanguage-handle-ast-error err buffer)) errors))))
 
 (defun viperlanguage-handle-ast-error (err buffer)
+  "Parse a specific error ERR regarding the ast construction of the program in BUFFER."
   (with-current-buffer buffer
     (let* ((position (alist-get 'position err))
            (start (alist-get 'start position))
@@ -298,6 +308,7 @@
 
 
 (defun viperlanguage-mode-line ()
+  "Return the string corresponding to the status of the verification for the current buffer."
   (if (equal major-mode 'viperlanguage-mode)
       (if (not viperlanguage-is-verified)
           (concat "[" (propertize "Unknown" 'face 'viperlanguage-notran-face) "]")
