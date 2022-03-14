@@ -151,8 +151,13 @@
 	          (setq fix -1)
 	        (setq fix 0))
         (indent-line-to (* (+ curindent fix) viperlanguage-default-tab-width)))))
-  (when (looking-at-p "[ \t]*\n")
-    (end-of-line)))
+  (let ((pos (point))
+        begpos)
+    (save-excursion
+      (beginning-of-line)
+      (setq begpos (point)))
+    (when (equal pos begpos)
+      (skip-syntax-forward "\s"))))
 
 ;;; make requests to server
 
@@ -333,7 +338,8 @@
   (let ((table (make-syntax-table)))
     (modify-syntax-entry ?/ ". 124b" table)
     (modify-syntax-entry ?* ". 23" table)
-    (modify-syntax-entry ?/ "- >b" table)))
+    (modify-syntax-entry ?\n "> b" table)
+    table))
 
 (define-derived-mode viperlanguage-mode fundamental-mode
   "viperlanguage mode"
