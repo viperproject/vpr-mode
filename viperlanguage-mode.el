@@ -28,10 +28,6 @@
 
 ;;; Code:
 
-;; requires
-
-(require 'cc-langs)
-
 ;; Variables
 
 (defvar-local viperlanguage-highlight-overlays nil "Highglight overlays of errors reported by Viper.")
@@ -332,10 +328,12 @@
   (define-key viperlanguage-mode-map (kbd "C-c C-v") 'viperlanguage-verify)
   (define-key viperlanguage-mode-map (kbd "C-c C-x") 'viperlanguage-stop-server))
 
+
 (defvar viperlanguage-syntax-table
   (let ((table (make-syntax-table)))
-    (c-populate-syntax-table table)
-    table))
+    (modify-syntax-entry ?/ ". 124b" table)
+    (modify-syntax-entry ?* ". 23" table)
+    (modify-syntax-entry ?/ "- >b" table)))
 
 (define-derived-mode viperlanguage-mode fundamental-mode
   "viperlanguage mode"
