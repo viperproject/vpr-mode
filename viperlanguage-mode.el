@@ -28,6 +28,10 @@
 
 ;;; Code:
 
+;; requires
+
+(require 'cc-langs)
+
 ;; Variables
 
 (defvar-local viperlanguage-highlight-overlays nil "Highglight overlays of errors reported by Viper.")
@@ -95,8 +99,6 @@
 ;; each category of keyword is given a particular face
 (setq viperlanguage-font-lock-keywords
       `(
-        ("\\(//.*\n\\)" . font-lock-comment-face)
-        (,viperlanguage-type-regexp . font-lock-type-face)
         (,viperlanguage-constant-regexp . font-lock-constant-face)
         (,viperlanguage-event-regexp . font-lock-builtin-face)
         (,viperlanguage-functions-regexp . font-lock-function-name-face)
@@ -330,11 +332,19 @@
   (define-key viperlanguage-mode-map (kbd "C-c C-v") 'viperlanguage-verify)
   (define-key viperlanguage-mode-map (kbd "C-c C-x") 'viperlanguage-stop-server))
 
+(defvar viperlanguage-syntax-table
+  (let ((table (make-syntax-table)))
+    (c-populate-syntax-table table)
+    table))
+
 (define-derived-mode viperlanguage-mode fundamental-mode
   "viperlanguage mode"
   "Major mode for editing Viper"
+  :syntax-table viperlanguage-syntax-table
   (setq font-lock-defaults '((viperlanguage-font-lock-keywords)))
   (setq-local indent-line-function #'viperlanguage-indent-line)
+  (setq comment-start "//")
+  (setq comment-end "")
   (cursor-sensor-mode)
   (setq global-mode-string (or global-mode-string '("")))
   (unless (member '(:eval (viperlanguage-mode-line)) global-mode-string)
