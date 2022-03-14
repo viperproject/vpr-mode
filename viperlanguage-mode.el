@@ -78,10 +78,10 @@
   "The face used to highlight not run verification.")
 
 ;; define several category of keywords
-(setq viperlanguage-keywords '("method" "while" "var" "import" "function" "predicate" "field" "if" "else" "returns"))
+(setq viperlanguage-keywords '("domain" "axiom" "method" "while" "var" "import" "function" "predicate" "field" "if" "else" "returns"))
 (setq viperlanguage-types '("Ref" "Bool" "Int" "Rational" "Perm" "Seq" "Set" "Multiset"))
-(setq viperlanguage-constants '())
-(setq viperlanguage-events '("invariant" "requires" "ensures" "fold" "unfold" "inhale" "exhale" "assert" "unfolding" "in"))
+(setq viperlanguage-constants '("true" "false"))
+(setq viperlanguage-events '("exists" "forall" "invariant" "requires" "ensures" "fold" "unfold" "inhale" "exhale" "assert" "unfolding" "in" "forperm"))
 (setq viperlanguage-functions '())
 
 ;; generate regex string for each category of keywords
@@ -293,6 +293,7 @@
   (with-current-buffer buffer
     (when (equal (format "%s" status) "failure")
       (message "AST construction failed.")
+      (setq-local viperlanguage-is-verified 2)
       (mapc (lambda (err) (viperlanguage-handle-ast-error err buffer)) errors))))
 
 (defun viperlanguage-handle-ast-error (err buffer)
