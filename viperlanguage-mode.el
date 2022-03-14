@@ -152,7 +152,9 @@
         (if (> (viperlanguage-count-braces) 0)
 	          (setq fix -1)
 	        (setq fix 0))
-        (indent-line-to (* (+ curindent fix) viperlanguage-default-tab-width))))))
+        (indent-line-to (* (+ curindent fix) viperlanguage-default-tab-width)))))
+  (when (looking-at-p "[ \t]*\n")
+    (end-of-line)))
 
 ;;; make requests to server
 
