@@ -95,12 +95,12 @@
 ;; each category of keyword is given a particular face
 (setq viperlanguage-font-lock-keywords
       `(
+        ("\\(//.*\n\\)" . font-lock-comment-face)
         (,viperlanguage-type-regexp . font-lock-type-face)
         (,viperlanguage-constant-regexp . font-lock-constant-face)
         (,viperlanguage-event-regexp . font-lock-builtin-face)
         (,viperlanguage-functions-regexp . font-lock-function-name-face)
-        (,viperlanguage-keywords-regexp . font-lock-keyword-face)
-	      ("//.*\n" . font-lock-comment-face)))
+        (,viperlanguage-keywords-regexp . font-lock-keyword-face)))
 
 ;; clear memory. no longer needed
 (setq viperlanguage-keywords nil)
