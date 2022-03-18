@@ -206,6 +206,7 @@
 
 (defun viperlanguage-verify-file (file-path buffer)
   "Verify the file with path FILE-PATH in the buffer BUFFER."
+  (setq-local viperlanguage-is-verified 3)
   (request (viperlanguage-request-url "verify")
     :type "POST"
     :data (json-encode
@@ -321,7 +322,9 @@
           (concat "[" (propertize "Unknown" 'face 'viperlanguage-notran-face) "]")
         (if (equal viperlanguage-is-verified 1)
             (concat "[" (propertize "Verified" 'face 'viperlanguage-verified-face) "]")
-          (concat "[" (propertize "Unverified" 'face 'viperlanguage-unverified-face) "]")))
+          (if (equal viperlanguage-is-verified 2)
+              (concat "[" (propertize "Unverified" 'face 'viperlanguage-unverified-face) "]")
+            (concat "[" (propertize "Verifying..." 'face 'viperlanguage-notran-face) "]"))))
     ""))
 ;;;###autoload
 
