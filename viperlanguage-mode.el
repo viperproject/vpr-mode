@@ -132,6 +132,12 @@
       (setq i (1+ i)))
     res))
 
+(defun viperlanguage-only-braces ()
+  "Check if the current line has only closing braces or parentheses."
+  (save-excursion
+    (beginning-of-line)
+    (looking-at-p "^[\t })]+$")))
+
 (defun viperlanguage-indent-line ()
   "Indent current line as Viper code."
   (interactive)
@@ -142,7 +148,7 @@
 	      (beginning-of-line)
 	      (if (bobp)
 	          (indent-line-to 0)
-	        (setq curindent (+ curindent (viperlanguage-count-braces)))
+	        (setq curindent (viperlanguage-count-braces))
 	        (while beg
 	          (forward-line -1)
 	          (setq curindent (+ curindent (viperlanguage-count-braces)))
@@ -152,7 +158,9 @@
       (let (fix)
         (if (> (viperlanguage-count-braces) 0)
 	          (setq fix -1)
-	        (setq fix 0))
+          (if (and (< (viperlanguage-count-braces) 0) (not (viperlanguage-only-braces)))
+              (setq fix +1)
+	          (setq fix 0)))
         (indent-line-to (* (+ curindent fix) viperlanguage-default-tab-width)))))
   (let ((pos (point))
         begpos)
@@ -279,9 +287,8 @@
 
 (defun viperlanguage-use-exception-results (msg)
   "Use the exception result.  Right now just print the MSG argument and stop the server."
-  (message "Exception! Shutting down server...")
-  (message "IN HERE")
   (message "%s" msg)
+  (message "Exception! Shutting down server...")
   (setq-local viperlanguage-has-exceptions t)
   (viperlanguage-stop-server))
 
