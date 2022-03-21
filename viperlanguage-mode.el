@@ -32,6 +32,8 @@
 
 (defvar-local viperlanguage-highlight-overlays nil "Highglight overlays of errors reported by Viper.")
 (defvar-local viperlanguage-is-verified nil "Holds the status of the program regarding its verification by Viper.")
+(defvar-local viperlanguage-has-errors nil "Is set to true when there are results with a verification status of failure.")
+(defvar-local viperlanguage-has-exceptions nil "Is set to true when an exception is raised by the server.")
 (defvar viperlanguage-viper-path nil "The location of Viper.")
 (defvar viperlanguage-server-port nil "Holds the port where the Viper server is listening.")
 (defvar viperlanguage-default-tab-width 4 "Space-tab equivalence in a Viper program.")
@@ -209,11 +211,15 @@
     (if viperlanguage-server-port
         (viperlanguage-verify-file buffer-file-name (current-buffer))
       (setq-local viperlanguage-is-verified nil)
+      (setq-local viperlanguage-has-errors nil)
+      (setq-local viperlanguage-has-exceptions nil)
       (message "No active viper server!"))))
 
 (defun viperlanguage-verify-file (file-path buffer)
   "Verify the file with path FILE-PATH in the buffer BUFFER."
   (setq-local viperlanguage-is-verified 3)
+  (setq-local viperlanguage-has-errors nil)
+  (setq-local viperlanguage-has-exceptions nil)
   (request (viperlanguage-request-url "verify")
     :type "POST"
     :data (json-encode
@@ -241,7 +247,8 @@
                           (let ((msgt (format "%s" (alist-get 'msg_type a))))
                             (or
                              (equal msgt "verification_result")
-                             (equal msgt "ast_construction_result"))))
+                             (equal msgt "ast_construction_result")
+                             (equal msgt "exception_report"))))
                         (mapcar
                          (lambda (a)
                            (json-parse-string
@@ -249,7 +256,7 @@
                             :object-type 'alist
                             :array-type 'list))
                          (split-string data "\n")))))
-                  (mapc (lambda (r) 
+                  (mapc (lambda (r)
                           (viperlanguage-parse-results r buffer))
                         filtered))))))
 
@@ -261,19 +268,30 @@
            (status (alist-get 'status msg_body))
            (details (alist-get 'details msg_body))
            (result (alist-get 'result details))
-           (errors (alist-get 'errors result)))
-      (if (equal (format "%s" (alist-get 'msg_type data)) "verification_result")
-          (viperlanguage-use-error-results status errors buffer)
-        (viperlanguage-use-ast-results status errors buffer)))))
+           (errors (alist-get 'errors result))
+           (msg (alist-get 'message msg_body)))
+      (when (equal (format "%s" (alist-get 'msg_type data)) "verification_result")
+        (viperlanguage-use-error-results status errors buffer))
+      (when (equal (format "%s" (alist-get 'msg_type data)) "ast_construction_result")
+        (viperlanguage-use-ast-results status errors buffer))
+      (when (equal (format "%s" (alist-get 'msg_type data)) "exception_report")
+        (viperlanguage-use-exception-results msg)))))
+
+(defun viperlanguage-use-exception-results (msg)
+  "Use the exception result.  Right now just print the MSG argument and stop the server."
+  (message "Exception! Shutting down server...")
+  (message "IN HERE")
+  (message "%s" msg)
+  (setq-local viperlanguage-has-exceptions t)
+  (viperlanguage-stop-server))
 
 (defun viperlanguage-use-error-results (status errors buffer)
   "If STATUS is success then the program verified, otherwise parse each error in ERRORS seperately for the file in buffer BUFFER."
   (with-current-buffer buffer
     (if (equal (format "%s" status) "success")
-        (progn 
-          (message "Program verified succesfully.")
-          (setq-local viperlanguage-is-verified 1))
+        (setq-local viperlanguage-is-verified 1)
       (setq-local viperlanguage-is-verified 2)
+      (setq-local viperlanguage-has-errors t)
       (mapc (lambda (err) (viperlanguage-handle-error err buffer)) errors))))
 
 (defun viperlanguage-handle-error (err buffer)
@@ -305,6 +323,7 @@
     (when (equal (format "%s" status) "failure")
       (message "AST construction failed.")
       (setq-local viperlanguage-is-verified 2)
+      (setq-local viperlanguage-has-errors t)
       (mapc (lambda (err) (viperlanguage-handle-ast-error err buffer)) errors))))
 
 (defun viperlanguage-handle-ast-error (err buffer)
@@ -327,11 +346,13 @@
   (if (equal major-mode 'viperlanguage-mode)
       (if (not viperlanguage-is-verified)
           (concat "[" (propertize "Unknown" 'face 'viperlanguage-notran-face) "]")
-        (if (equal viperlanguage-is-verified 1)
+        (if (and (equal viperlanguage-is-verified 1) (not viperlanguage-has-exceptions))
             (concat "[" (propertize "Verified" 'face 'viperlanguage-verified-face) "]")
           (if (equal viperlanguage-is-verified 2)
               (concat "[" (propertize "Unverified" 'face 'viperlanguage-unverified-face) "]")
-            (concat "[" (propertize "Verifying..." 'face 'viperlanguage-notran-face) "]"))))
+            (if viperlanguage-has-exceptions
+                (concat "[" (propertize "Exception" 'face 'viperlanguage-unverified-face) "]")
+              (concat "[" (propertize "Verifying..." 'face 'viperlanguage-notran-face) "]")))))
     ""))
 ;;;###autoload
 
