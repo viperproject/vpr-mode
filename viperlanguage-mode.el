@@ -81,7 +81,7 @@
 (setq viperlanguage-keywords '("domain" "axiom" "method" "while" "var" "import" "function" "predicate" "field" "if" "else" "returns"))
 (setq viperlanguage-types '("Ref" "Bool" "Int" "Rational" "Perm" "Seq" "Set" "Multiset"))
 (setq viperlanguage-constants '("true" "false"))
-(setq viperlanguage-events '("exists" "forall" "invariant" "requires" "ensures" "fold" "unfold" "inhale" "exhale" "assert" "unfolding" "in" "forperm"))
+(setq viperlanguage-events '("exists" "forall" "invariant" "apply" "requires" "ensures" "fold" "unfold" "inhale" "exhale" "assert" "unfolding" "in" "forperm" "package"))
 (setq viperlanguage-functions '())
 
 ;; generate regex string for each category of keywords
@@ -159,6 +159,12 @@
       (setq begpos (point)))
     (when (equal pos begpos)
       (skip-syntax-forward "\s"))))
+
+(defun viperlanguage-brace-and-indent ()
+  "Insert a closing brace and indent line."
+  (interactive)
+  (insert-char ?})
+  (viperlanguage-indent-line))
 
 ;;; make requests to server
 
@@ -335,7 +341,8 @@
   (setq viperlanguage-mode-map (make-sparse-keymap))
   (define-key viperlanguage-mode-map (kbd "C-c C-c") 'viperlanguage-start-server)
   (define-key viperlanguage-mode-map (kbd "C-c C-v") 'viperlanguage-verify)
-  (define-key viperlanguage-mode-map (kbd "C-c C-x") 'viperlanguage-stop-server))
+  (define-key viperlanguage-mode-map (kbd "C-c C-x") 'viperlanguage-stop-server)
+  (define-key viperlanguage-mode-map (kbd "}") 'viperlanguage-brace-and-indent))
 
 
 (defvar viperlanguage-syntax-table
