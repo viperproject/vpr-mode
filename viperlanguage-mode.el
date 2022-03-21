@@ -95,6 +95,7 @@
 ;; each category of keyword is given a particular face
 (setq viperlanguage-font-lock-keywords
       `(
+        (,viperlanguage-type-regexp . font-lock-type-face)
         (,viperlanguage-constant-regexp . font-lock-constant-face)
         (,viperlanguage-event-regexp . font-lock-builtin-face)
         (,viperlanguage-functions-regexp . font-lock-function-name-face)
