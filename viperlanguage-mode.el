@@ -185,7 +185,7 @@
       (forward-line 1))))
 
 (defun viperlanguage-start-server ()
-  "Start a Viper server."
+  "Start the Viper server."
   (interactive)
   (when (not viperlanguage-server-port)
     (let ((viperlanguage-viperserver (concat (file-name-as-directory viperlanguage-viper-path) "backends/viperserver.jar")))
