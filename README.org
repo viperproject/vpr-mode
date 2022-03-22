@@ -18,7 +18,8 @@ Then, add the following lines in your init.el.
 #+BEGIN_SRC emacs-lisp
   (add-to-list 'load-path "<viperlanguage-mode path>")
 
-  (use-package viperlanguage-mode)
+  (use-package viperlanguage-mode
+    :ensure t)
 
   (setq viperlanguage-viper-path "<viper path>")
 #+END_SRC
