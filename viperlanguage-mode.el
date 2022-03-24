@@ -43,6 +43,7 @@
 (defvar-local viperlanguage-backend-options "--disableCaching --z3Exe=/home/shit/ViperToolsLinux/z3/bin/z3" "The backend options that Viper should use.")
 
 ;; helper functions
+
 (defun viperlanguage-pos-at-line-col (lc buffer)
   "Find the absolute position given by row column in LC in a BUFFER."
   (save-excursion
