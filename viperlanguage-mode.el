@@ -192,7 +192,8 @@
   (interactive)
   (if (equal viperlanguage-backend "carbon")
       (setq viperlanguage-backend "silicon")
-    (setq viperlanguage-backend "carbon")))
+    (setq viperlanguage-backend "carbon"))
+  (force-mode-line-update))
 
 ;;; make requests to server
 
@@ -246,6 +247,7 @@
   (setq-local viperlanguage-is-verified 3)
   (setq-local viperlanguage-has-errors nil)
   (setq-local viperlanguage-has-exceptions nil)
+  (force-mode-line-update)
   (let (opts)
     (if (equal viperlanguage-backend "silicon")
         (setq opts (format "%s %s" (format  viperlanguage-backend-options viperlanguage-z3-path) viperlanguage-silicon-options))
@@ -321,6 +323,7 @@
         (setq-local viperlanguage-is-verified 1)
       (setq-local viperlanguage-is-verified 2)
       (setq-local viperlanguage-has-errors t)
+      (force-mode-line-update)
       (mapc (lambda (err) (viperlanguage-handle-error err buffer)) errors))))
 
 (defun viperlanguage-handle-error (err buffer)
@@ -353,6 +356,7 @@
       (message "AST construction failed.")
       (setq-local viperlanguage-is-verified 2)
       (setq-local viperlanguage-has-errors t)
+      (force-mode-line-update)
       (mapc (lambda (err) (viperlanguage-handle-ast-error err buffer)) errors))))
 
 (defun viperlanguage-handle-ast-error (err buffer)
@@ -372,19 +376,19 @@
 
 (defun viperlanguage-mode-line ()
   "Return the string corresponding to the status of the verification for the current buffer."
-  (concat "[Backend: " (propertize (format "%s" viperlanguage-backend) 'face 'viperlanguage-backend-face)
-          " | State: "
-          (if (equal major-mode 'viperlanguage-mode)
-              (if (not viperlanguage-is-verified)
-                  (concat (propertize "Unknown" 'face 'viperlanguage-notran-face) "]")
-                (if (and (equal viperlanguage-is-verified 1) (not viperlanguage-has-exceptions))
-                    (concat (propertize "Verified" 'face 'viperlanguage-verified-face) "]")
-                  (if (equal viperlanguage-is-verified 2)
-                      (concat (propertize "Unverified" 'face 'viperlanguage-unverified-face) "]")
-                    (if viperlanguage-has-exceptions
-                        (concat (propertize "Exception" 'face 'viperlanguage-unverified-face) "]")
-                      (concat (propertize "Verifying..." 'face 'viperlanguage-notran-face) "]")))))
-            "")))
+  (let ((b (concat "[Backend: " (propertize (format "%s" viperlanguage-backend) 'face 'viperlanguage-backend-face)
+                   " | State: ")))
+    (if (equal major-mode 'viperlanguage-mode)
+        (if (not viperlanguage-is-verified)
+            (concat b (propertize "Unknown" 'face 'viperlanguage-notran-face) "]")
+          (if (and (equal viperlanguage-is-verified 1) (not viperlanguage-has-exceptions))
+              (concat b (propertize "Verified" 'face 'viperlanguage-verified-face) "]")
+            (if (equal viperlanguage-is-verified 2)
+                (concat b (propertize "Unverified" 'face 'viperlanguage-unverified-face) "]")
+              (if viperlanguage-has-exceptions
+                  (concat b (propertize "Exception" 'face 'viperlanguage-unverified-face) "]")
+                (concat b (propertize "Verifying..." 'face 'viperlanguage-notran-face) "]")))))
+      "")))
 ;;;###autoload
 
 (defvar viperlanguage-mode-map nil "Keymap for viperlanguage-mode.")
