@@ -21,6 +21,8 @@ Then, add the following lines in your init.el.
   (use-package viperlanguage-mode)
 
   (setq viperlanguage-viper-path "<viper path>")
+  (setq viperlanguage-z3-path "<path to Z3>")
+  (setq viperlanguage-boogie-path "<path to Boogie>")
 #+END_SRC
 
 If you want the verification to happen on save:
@@ -37,3 +39,4 @@ Current keybindings are:
 - ~C-c C-c~: Start Viper server
 - ~C-c C-v~: Verify this file
 - ~C-c C-x~: Stop Viper server
+- ~C-c C-b~: Alternate the backend between silicon and carbon
