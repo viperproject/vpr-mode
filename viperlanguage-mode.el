@@ -35,12 +35,16 @@
 (defvar-local viperlanguage-has-errors nil "Is set to true when there are results with a verification status of failure.")
 (defvar-local viperlanguage-has-exceptions nil "Is set to true when an exception is raised by the server.")
 (defvar viperlanguage-viper-path nil "The location of Viper.")
+(defvar viperlanguage-z3-path nil "The location of Z3.")
+(defvar viperlanguage-boogie-path nil "The location of Boogie.")
 (defvar viperlanguage-server-port nil "Holds the port where the Viper server is listening.")
 (defvar viperlanguage-default-tab-width 4 "Space-tab equivalence in a Viper program.")
 (defvar viperlanguage-async-buffer nil "The buffer in which Viper server is running.")
 (defvar viperlanguage-async-timer nil "Holds the timer of the function ran to identify the Viper server port.")
 (defvar-local viperlanguage-backend "silicon" "The backend that should be used by Viper.")
-(defvar-local viperlanguage-backend-options "--disableCaching --z3Exe=/home/shit/ViperToolsLinux/z3/bin/z3" "The backend options that Viper should use.")
+(defvar-local viperlanguage-backend-options "--disableCaching --z3Exe=%s")
+(defvar-local viperlanguage-silicon-options "" "The silicon backend options that Viper should use.")
+(defvar-local viperlanguage-carbon-options "--boogieExe=%s" "The carbon backend option that Viper should use.")
 
 ;; helper functions
 
@@ -72,6 +76,10 @@
   '((t (:weight bold :foreground "Green")))
   "The face used to highlight succesful verification.")
 
+(defface viperlanguage-backend-face
+  '((t (:weight bold :foreground "#81d4fa")))
+  "The face used to highlight the backend in modeline.")
+
 (defface viperlanguage-unverified-face
   '((t (:weight bold :foreground "Red")))
   "The face used to highlight failed verification.")
@@ -81,7 +89,7 @@
   "The face used to highlight not run verification.")
 
 ;; define several category of keywords
-(setq viperlanguage-keywords '("domain" "axiom" "method" "while" "var" "import" "function" "predicate" "field" "if" "else" "returns"))
+(setq viperlanguage-keywords '("domain" "axiom" "method" "while" "label" "goto" "var" "import" "function" "predicate" "field" "if" "else" "returns"))
 (setq viperlanguage-types '("Ref" "Bool" "Int" "Rational" "Perm" "Seq" "Set" "Multiset"))
 (setq viperlanguage-constants '("true" "false"))
 (setq viperlanguage-events '("exists" "forall" "invariant" "apply" "requires" "ensures" "fold" "unfold" "inhale" "exhale" "assert" "unfolding" "in" "forperm" "package"))
@@ -177,6 +185,15 @@
   (insert-char ?})
   (viperlanguage-indent-line))
 
+;;; configure
+
+(defun viperlanguage-change-backend ()
+  "Alternate the backend from carbon to silicon and vice versa."
+  (interactive)
+  (if (equal viperlanguage-backend "carbon")
+      (setq viperlanguage-backend "silicon")
+    (setq viperlanguage-backend "carbon")))
+
 ;;; make requests to server
 
 (defun viperlanguage-request-url (cmd)
@@ -229,20 +246,24 @@
   (setq-local viperlanguage-is-verified 3)
   (setq-local viperlanguage-has-errors nil)
   (setq-local viperlanguage-has-exceptions nil)
-  (request (viperlanguage-request-url "verify")
-    :type "POST"
-    :data (json-encode
-           (cons
-            (cons "arg"
-                  (format
-                   "%s %s \"%s\""
-                   viperlanguage-backend viperlanguage-backend-options file-path)) ()))
-    :headers '(("Content-Type" . "application/json"))
-    :parser 'json-read
-    :success (cl-function
-              (lambda (&key data &allow-other-keys)
-                (let ((id (cdr (assoc 'id data))))
-                  (viperlanguage-get-verification id buffer))))))
+  (let (opts)
+    (if (equal viperlanguage-backend "silicon")
+        (setq opts (format "%s %s" (format  viperlanguage-backend-options viperlanguage-z3-path) viperlanguage-silicon-options))
+      (setq opts (format "%s %s" (format viperlanguage-backend-options viperlanguage-z3-path) (format viperlanguage-carbon-options viperlanguage-boogie-path))))
+    (request (viperlanguage-request-url "verify")
+      :type "POST"
+      :data (json-encode
+             (cons
+              (cons "arg"
+                    (format
+                     "%s %s \"%s\""
+                     viperlanguage-backend opts file-path)) ()))
+      :headers '(("Content-Type" . "application/json"))
+      :parser 'json-read
+      :success (cl-function
+                (lambda (&key data &allow-other-keys)
+                  (let ((id (cdr (assoc 'id data))))
+                    (viperlanguage-get-verification id buffer)))))))
 
 (defun viperlanguage-get-verification (id buffer)
   "Get the verification result for id ID in buffer BUFFER."
@@ -351,17 +372,19 @@
 
 (defun viperlanguage-mode-line ()
   "Return the string corresponding to the status of the verification for the current buffer."
-  (if (equal major-mode 'viperlanguage-mode)
-      (if (not viperlanguage-is-verified)
-          (concat "[" (propertize "Unknown" 'face 'viperlanguage-notran-face) "]")
-        (if (and (equal viperlanguage-is-verified 1) (not viperlanguage-has-exceptions))
-            (concat "[" (propertize "Verified" 'face 'viperlanguage-verified-face) "]")
-          (if (equal viperlanguage-is-verified 2)
-              (concat "[" (propertize "Unverified" 'face 'viperlanguage-unverified-face) "]")
-            (if viperlanguage-has-exceptions
-                (concat "[" (propertize "Exception" 'face 'viperlanguage-unverified-face) "]")
-              (concat "[" (propertize "Verifying..." 'face 'viperlanguage-notran-face) "]")))))
-    ""))
+  (concat "[Backend: " (propertize (format "%s" viperlanguage-backend) 'face 'viperlanguage-backend-face)
+          " | State: "
+          (if (equal major-mode 'viperlanguage-mode)
+              (if (not viperlanguage-is-verified)
+                  (concat (propertize "Unknown" 'face 'viperlanguage-notran-face) "]")
+                (if (and (equal viperlanguage-is-verified 1) (not viperlanguage-has-exceptions))
+                    (concat (propertize "Verified" 'face 'viperlanguage-verified-face) "]")
+                  (if (equal viperlanguage-is-verified 2)
+                      (concat (propertize "Unverified" 'face 'viperlanguage-unverified-face) "]")
+                    (if viperlanguage-has-exceptions
+                        (concat (propertize "Exception" 'face 'viperlanguage-unverified-face) "]")
+                      (concat (propertize "Verifying..." 'face 'viperlanguage-notran-face) "]")))))
+            "")))
 ;;;###autoload
 
 (defvar viperlanguage-mode-map nil "Keymap for viperlanguage-mode.")
@@ -371,6 +394,7 @@
   (define-key viperlanguage-mode-map (kbd "C-c C-c") 'viperlanguage-start-server)
   (define-key viperlanguage-mode-map (kbd "C-c C-v") 'viperlanguage-verify)
   (define-key viperlanguage-mode-map (kbd "C-c C-x") 'viperlanguage-stop-server)
+  (define-key viperlanguage-mode-map (kbd "C-c C-b") 'viperlanguage-change-backend)
   (define-key viperlanguage-mode-map (kbd "}") 'viperlanguage-brace-and-indent))
 
 
