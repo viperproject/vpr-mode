@@ -191,9 +191,45 @@
   "Alternate the backend from carbon to silicon and vice versa."
   (interactive)
   (if (equal viperlanguage-backend "carbon")
-      (setq viperlanguage-backend "silicon")
-    (setq viperlanguage-backend "carbon"))
+      (progn
+        (setq-local viperlanguage-backend "silicon")
+        (setq-local viperlanguage-carbon-args-set viperlanguage-args-set)
+        (setq-local viperlanguage-carbon-args-of-args viperlanguage-args-of-args)
+        (setq-local viperlanguage-args-set viperlanguage-silicon-args-set)
+        (setq-local viperlanguage-args-of-args viperlanguage-silicon-args-of-args)
+        (setq-local viperlanguage-args-doc viperlanguage-silicon-args-doc)
+        (setq-local viperlanguage-args-that-need-args viperlanguage-silicon-args-that-need-args)
+        (setq-local viperlanguage-args-that-need-many-args viperlanguage-silicon-args-that-need-many-args))
+    (setq-local viperlanguage-backend "carbon")
+    (setq-local viperlanguage-silicon-args-set viperlanguage-args-set)
+    (setq-local viperlanguage-silicon-args-of-args viperlanguage-args-of-args)
+    (setq-local viperlanguage-args-set viperlanguage-carbon-args-set)
+    (setq-local viperlanguage-args-of-args viperlanguage-carbon-args-of-args)
+    (setq-local viperlanguage-args-doc viperlanguage-carbon-args-doc)
+    (setq-local viperlanguage-args-that-need-args viperlanguage-carbon-args-that-need-args)
+    (setq-local viperlanguage-args-that-need-many-args viperlanguage-carbon-args-that-need-many-args))
   (force-mode-line-update))
+
+(defun viperlanguage-edit-args ()
+  "Spawn the construction buffer for the arguments."
+  (interactive)
+  (let ((cur-buf (buffer-name))
+        (arg-buf (format "%s%s" (current-buffer) "~args"))
+        (arg-set viperlanguage-args-set)
+        (args-of-args viperlanguage-args-of-args)
+        (args-doc viperlanguage-args-doc)
+        (args-that-need-args viperlanguage-args-that-need-args)
+        (args-that-need-many-args viperlanguage-args-that-need-many-args))
+    (with-current-buffer (get-buffer-create arg-buf)
+      (viperlanguage-args-mode)
+      (setq-local viperlanguage-args-original-buffer cur-buf)
+      (setq-local viperlanguage-args-set arg-set)
+      (setq-local viperlanguage-args-of-args args-of-args)
+      (setq-local viperlanguage-args-doc args-doc)
+      (setq-local viperlanguage-args-that-need-args args-that-need-args)
+      (setq-local viperlanguage-args-that-need-many-args args-that-need-many-args)
+      (viperlanguage-populate-args-buffer))
+    (pop-to-buffer arg-buf)))
 
 ;;; make requests to server
 
@@ -373,7 +409,6 @@
         (overlay-put ov 'face 'viperlanguage-error)
         (overlay-put ov 'help-echo text)))))
 
-
 (defun viperlanguage-mode-line ()
   "Return the string corresponding to the status of the verification for the current buffer."
   (let ((b (concat "[Backend: " (propertize (format "%s" viperlanguage-backend) 'face 'viperlanguage-backend-face)
@@ -389,6 +424,332 @@
                   (concat b (propertize "Exception" 'face 'viperlanguage-unverified-face) "]")
                 (concat b (propertize "Verifying..." 'face 'viperlanguage-notran-face) "]")))))
       "")))
+
+;; ===============
+;; arguments stuff
+;; ===============
+
+(defvar-local viperlanguage-args-original-buffer nil "Holds the name of the viperlanguage file that corresponds to a viperlanguage arguments construction buffer.")
+(defvar-local viperlanguage-args-set nil "Holds the arguments of the viper backend.")
+(defvar-local viperlanguage-args-of-args nil "Holds arguments of arguments of the viper backend.")
+(defvar-local viperlanguage-args-doc nil "Holds arguments with their documentation depending on the backend.")
+(defvar-local viperlanguage-args-that-need-args nil "Holds arguments that need arguments depending on the backend.")
+(defvar-local viperlanguage-args-that-need-many-args nil "Holds arguments that need namy argumentds depending on the backend.")
+
+(defvar-local viperlanguage-silicon-args-set nil "Holds the arguments of the silicon backend.")
+(defvar-local viperlanguage-silicon-args-of-args nil "Holds arguments of arguments of the silicon backend.")
+
+(defvar-local viperlanguage-carbon-args-set nil "Holds the arguments of the silicon backend.")
+(defvar-local viperlanguage-carbon-args-of-args nil "Holds arguments of arguments of the silicon backend.")
+
+;; getters
+
+(defun viperlanguage-args-mode-getter (prompt modes)
+  "Get a mode from a list of MODES presenting a PROMPT."
+  (lambda ()
+    (completing-read prompt modes nil t)))
+
+(defun viperlanguage-args-int-getter (prompt)
+  "Get an integer presenting a PROMPT."
+  (lambda () (read-number prompt)))
+
+(defun viperlanguage-args-multi-string-getter (prompt1 prompt2)
+  "Get multiple strings.  Each string is taken with PROMPT1 and between strings PROMPT2 asks the user if he wants to continue."
+  (lambda ()
+    (let ((s (read-string prompt1)))
+      (while (y-or-n-p prompt2)
+        (setq s (concat s " " (read-string prompt1))))
+      s)))
+
+;; arguments for silicon
+
+(defvar viperlanguage-silicon-args-doc
+  '(("alternativeFunctionVerificationOrder" . "Calculate the order in which functions are verified and function axioms become available in an alternative way that takes dependencies between functions through predicate unfoldings into account. This is more complete in some cases (see Silicon issue #355) but less complete in others (see test all/issues/silicon/unofficial007).")
+    ("assertionMode" . "Determines how assertion checks are encoded in SMTLIB. Options are 'pp' (push-pop) and 'cs' (soft constraints) (default: cs).")
+    ("assertTimeout" . "Timeout (in ms) per SMT solver assertion (default: 0, i.e. no timeout).")
+    ("assumeInjectivityOnInhale" . "Assumes injectivity of the receiver expression when inhaling quantified permissions, instead of checking it.")
+    ("checkTimeout" . "Timeout (in ms) per SMT solver check. Solver checks differ from solver asserts in that a failing assert always yields a verification error whereas a failing check doesn't, at least not directly. However, failing checks might result in performance degradation, e.g. when a dead program path is nevertheless explored, and indirectly in verification failures due to incompletenesses, e.g. when the held permission amount is too coarsely underapproximated (default: 10).")
+    ("conditionalizePermissions" . "Potentially reduces the number of symbolic execution paths, by conditionalising permission expressions. E.g. rewrite \"b ==> acc(x.f, p)\" to \"acc(x.f, b ? p : none)\".This is an experimental feature; report problems if you observe any.")
+    ("counterexample" . "Return counterexample for errors. Pass 'native' for returning the native model from the backend, 'variables' for returning a model of all local Viper variables, or 'mapped' (only available on Silicon) for returning a model with Ref variables resolved to object-like structures.")
+    ("disableCaches" . "Disables various caches in Silicon's state.")
+    ("disableCatchingExceptions" . "Don't catch exceptions (can be useful for debugging problems with Silicon)")
+    ("disableChunkOrderHeuristics" . "Disable heuristic ordering of quantified chunks (context: iterated separating conjunctions).")
+    ("disableHavocHack407" . "A Viper method call to ___silicon_hack407_havoc_all_R, where R is a field or predicate, results in Silicon havocking all instances of R. See also Silicon issue #407.")
+    ("disableISCTriggers" . "Don't pick triggers for quantifiers, let the SMT solver do it (context: iterated separating conjunctions).")
+    ("disableShortCircuitingEvaluations" . "Disable short-circuiting evaluation of AND, OR. If disabled, evaluating e.g., i > 0 && f(i), will fail if f's precondition requires i > 0.")
+    ("disableSubsumption" . "Don't add assumptions gained by verifying an assert statement")
+    ("disableTempDirectory" . "Disable the creation of temporary data (default: ./tmp)")
+    ("disableValueMapCaching" . "Disable caching of value maps (context: iterated separating conjunctions).")
+    ("enableBranchconditionReporting" . "Report branch conditions (can be useful for assertions that fail on multiple branches)")
+    ("enableMoreCompleteExhale" . "Enable a more complete exhale version.")
+    ("enablePredicateTriggersOnInhale" . "Emit predicate-based function trigger on each inhale of a predicate instance (context: heap-dependent functions).")
+    ("excludeMethods" . "Exclude methods from verification (default: ''). Is applied after the include pattern.")
+    ("handlePureConjunctsIndividually" . "Handle pure conjunction individually.Increases precision of error reporting, but may slow down verification.")
+    ("includeMethods" . "Include methods in verification (default: '*'). Wildcard characters are '?' and '*'.")
+    ("logConfig" . "Path to config file specifying SymbExLogger options")
+    ("logLevel" . "One of the log levels ALL, TRACE, DEBUG, INFO, WARN, ERROR, OFF")
+    ("mapAxiomatizationFile" . "Source file with map axiomatisation. If omitted, built-in one is used.")
+    ("maxHeuristicsDepth" . "Maximal number of nested heuristics applications (default: 3)")
+    ("multisetAxiomatizationFile" . "Source file with multiset axiomatisation. If omitted, built-in one is used.")
+    ("numberOfErrorsToReport" . "Number of errors per member before the verifier stops. If this number is set to 0, all errors are reported.")
+    ("numberOfParallelVerifiers" . "Number of verifiers run in parallel. This number plus one is the number of provers run in parallel (default: 12)")
+    ("plugin" . "Load plugin(s) with given class name(s). Several plugins can be separated by ':'. The fully qualified class name of the plugin should be specified.")
+    ("printMethodCFGs" . "Print a DOT (Graphviz) representation of the CFG of each method to verify to a file '<tempDirectory>/<methodName>.dot'.")
+    ("printTranslatedProgram" . "Print the final program that is going to be verified to stdout.")
+    ("qpSplitTimeout" . "Timeout (in ms) used by QP's split algorithm when 1) checking if a chunk holds no further permissions, and 2) checking if sufficiently many permissions have already been split off.")
+    ("recursivePredicateUnfoldings" . "Evaluate n unfolding expressions in the body of predicates that (transitively) unfold other instances of themselves (default: 1)")
+    ("sequenceAxiomatizationFile" . "Source file with sequence axiomatisation. If omitted, built-in one is used.")
+    ("setAxiomatizationFile" . "Source file with set axiomatisation. If omitted, built-in one is used.")
+    ("stateConsolidationMode" . "One of the following modes: 0: Minimal work, many incompletenesses 1: Most work, fewest incompletenesses 2: Similar to 1, but less eager 3: Less eager and less complete than 1 4: Intended for use with moreCompleteExhale")
+    ("tempDirectory" . "Path to which all temporary data will be written (default: ./tmp)")
+    ("timeout" . "Time out after approx. n seconds. The timeout is for the whole verification, not per method or proof obligation (default: 0, i.e. no timeout).")
+    ("z3Args" . "Command-line arguments which should be forwarded to Z3. The expected format is \"<opt> <opt> ... <opt>\", excluding the quotation marks.")
+    ("z3ConfigArgs" . "Configuration options which should be forwarded to Z3. The expected format is \"<key>=<val> <key>=<val> ... <key>=<val>\", excluding the quotation marks. The configuration options given here will override those from Silicon's Z3 preamble.")
+    ("z3EnableResourceBounds" . "Use Z3's resource bounds instead of timeouts")
+    ("z3Exe" . "Z3 executable. The environment variable Z3_EXE can also be used to specify the path of the executable.")
+    ("z3LogFile" . "Log file containing the interaction with Z3, extension smt2 will be appended. (default: <tempDirectory>/logfile.smt2)")
+    ("z3RandomizeSeeds" . "Set various Z3 random seeds to random values")
+    ("z3ResourcesPerMillisecond" . "Z3 resources per milliseconds. Is used to convert timeouts to resource bounds.")
+    ("z3SaturationTimeout" . "Timeout (in ms) used for Z3 state saturation calls (default: 100). A timeout of 0 disables all saturation checks.")
+    ("z3SaturationTimeoutWeights" . "Weights used to compute the effective timeout for Z3 state saturation calls, which are made at various points during a symbolic execution. The effective timeouts for a particular saturation call is computed by multiplying the corresponding weight with the base timeout for saturation calls. Defaults to the following weights: after program preamble: 1.0 after inhaling contracts: 0.5 after unfold: 0.4 after inhale: 0.2 before repeated Z3 queries: 0.02 Weights must be non-negative, a weight of 0 disables the corresponding saturation call and a minimal timeout of 10ms is enforced.")
+    ("help" . "Show help message"))
+  "Documentation for silicon arguments.")
+
+(defvar viperlanguage-silicon-args-that-need-args
+  `(("assertionMode" . ,(viperlanguage-args-mode-getter "Assertion mode: " '("cs" "pp")))
+    ("assertTimeout" . ,(viperlanguage-args-int-getter "Assert timeout (in ms): "))
+    ("checkTimeout" . ,(viperlanguage-args-int-getter "Z3 check timeout (in ms): "))
+    ("counterexample" . ,(viperlanguage-args-mode-getter "Counterexample mode: " '("native" "variables" "mapped")))
+    ("excludeMethods" . (lambda () (read-string "Exclude methods: ")))
+    ("includeMethods" . (lambda () (read-string "Include methods: ")))
+    ("logConfig" . (lambda () (read-file-name "SymbExLogger config file: ")))
+    ("logLevel" . ,(viperlanguage-args-mode-getter "Log level: " '("ALL" "TRACE" "DEBUG" "INFO" "WARN" "ERROR" "OFF")))
+    ("mapAxiomatizationFile" . (lambda () (read-file-name "Map axiomatization file: ")))
+    ("maxHeuristicsDepth" . ,(viperlanguage-args-int-getter "Max heuristics depth: "))
+    ("multisetAxiomatizationFile" . (lambda () (read-file-name "Multiset axiomatization file: ")))
+    ("numberOfErrorsToReport" . ,(viperlanguage-args-int-getter "Number of errors (0 for all): "))
+    ("numberOfParallelVerifiers" . ,(viperlanguage-args-int-getter "Number of parallel verifiers: "))
+    ("plugin" . (lambda () (read-string "Plugins (multiple seperated with ':': ")))
+    ("qpSplitTimeout" . ,(viperlanguage-args-int-getter "QP split timeout (in ms): "))
+    ("recursivePredicateUnfoldings" . ,(viperlanguage-args-int-getter "Number of unfoldings: "))
+    ("sequenceAxiomatizationFile" . (lambda () (read-file-name "Sequence axiomatization file: ")))
+    ("setAxiomatizationFile" . (lambda () (read-file-name "Set axiomatization file: ")))
+    ("stateConsolidationMode" . ,(viperlanguage-args-mode-getter "Assertion Mode: " '("0" "1" "2" "3" "4")))
+    ("tempDirectory" . (lambda () (read-directory-name "Temp directory: ")))
+    ("timeout" . ,(viperlanguage-args-int-getter "Timeout (in s): "))
+    ("z3Args" . ,(viperlanguage-args-multi-string-getter "Z3 argument: " "Enter more arguments? "))
+    ("z3ConfigArgs" . ,(viperlanguage-args-multi-string-getter "Z3 config argument: " "Enter more arguments? "))
+    ("z3Exe" . (lambda () (read-file-name "Z3 executable: ")))
+    ("z3LogFile" . (lambda () (read-file-name "Z3 log file: ")))
+    ("z3ResourcesPerMillisecond" . (lambda () (read-string "Resources per milliseconds: ")))
+    ("z3SaturationTimeout" . ,(viperlanguage-args-int-getter "Saturation timeout (in ms): "))
+    ("z3SaturationTimeoutWeights" . ,(viperlanguage-args-multi-string-getter "Saturation timeout weight: " "Enter more weights? ")))
+  "Viper arguments that take arguments and functions to ask them from the user.")
+
+(defvar viperlanguage-silicon-args-that-need-many-args
+  '("z3Args"
+    "z3ConfigArgs"
+    "z3SaturationTimeoutWeights")
+  "Viper arguments that take arguments and functions to ask them from the user.")
+
+;; arguments for carbon
+
+(defvar viperlanguage-carbon-args-doc nil
+  "Documentation for silicon arguments.")
+
+(defvar viperlanguage-carbon-args-that-need-args nil
+  "Viper arguments that take arguments and functions to ask them from the user.")
+
+(defvar viperlanguage-carbon-args-that-need-many-args nil
+  "Viper arguments that take arguments and functions to ask them from the user.")
+
+;; argument checking and unchecking logic
+
+(defun viperlanguage-args-serialize ()
+  "Return the arguments string."
+  (let ((i viperlanguage-args-set)
+        (s ""))
+    (while i
+      (let ((cur (car i))
+            (next (cdr i)))
+        (setq s (format "%s --%s" s cur))
+        (when (assoc cur viperlanguage-args-that-need-args)
+          (setq s (format "%s %s" s (cdr (assoc cur viperlanguage-args-of-args)))))
+        (setq i next)))
+    s))
+
+(defun viperlanguage-dump (data filename)
+  "Dump DATA in the file FILENAME."
+  (with-temp-file filename
+    (prin1 data (current-buffer))))
+
+(defun viperlanguage-load (filename)
+  "Restore data from the file FILENAME."
+  (with-temp-buffer
+    (insert-file-contents filename)
+    (cl-assert (bobp))
+    (read (current-buffer))))
+
+(defun viperlanguage-args-save ()
+  "Save the current argument configuration to the disk."
+  (interactive)
+  (let ((f (read-file-name "File to save configuration: ")))
+    (viperlanguage-dump (cons viperlanguage-args-set viperlanguage-args-of-args) f)))
+
+(defun viperlanguage-args-load ()
+  "Load an argument configuration from the disk."
+  (interactive)
+  (let* ((f (read-file-name "File name to load configuration: "))
+         (data (viperlanguage-load f))
+         (args (car data))
+         (args-of-args (cdr data)))
+    (setq-local viperlanguage-args-set args)
+    (setq-local viperlanguage-args-of-args args-of-args)
+    (viperlanguage-args-transfer)
+    (viperlanguage-populate-args-buffer)))
+
+(defun viperlanguage-populate-args-buffer ()
+  "Insert the prelude and arguments wit their values so far in the current buffer."
+  (setq-local buffer-read-only nil)
+  (erase-buffer)
+  (goto-char (point-min))
+  (insert "Viperlanguage argument selection buffer.\nCheck any argument needed with 'c'.\nAdd arguments to an argument with 'a'\nPrint documentation of argument with 'd'.\nSave configuraton with 's'.\nLoad configuration with 'l'.\nPress 'q' to exit.\n\n")
+  (let ((start-pos (point)))
+    (let ((i viperlanguage-args-doc))
+      (while i
+        (let ((cur (car i))
+              (next (cdr i)))
+          (insert-char ?\[)
+          (if (member (car cur) viperlanguage-args-set)
+              (insert (propertize "X" 'face 'viperlanguage-verified-face))
+            (insert-char ? ))
+          (insert "] ")
+          (insert (car cur))
+          (when (and (member (car cur) viperlanguage-args-set) (assoc (car cur) viperlanguage-args-that-need-args))
+            (insert (concat ": " (propertize (format "%s" (cdr (assoc (car cur) viperlanguage-args-of-args))) 'face 'viperlanguage-argument-face))))
+          (insert-char ?\n)
+          (setq i next))))
+    (setq-local buffer-read-only t)
+    (goto-char start-pos)))
+
+(defun viperlanguage-args-transfer ()
+  "Transfer the change to the arguments at the main viperlanguage buffer."
+  (let ((args viperlanguage-args-set)
+        (args-of-args viperlanguage-args-of-args))
+    (with-current-buffer viperlanguage-args-original-buffer
+      (setq-local viperlanguage-args-set args)
+      (setq-local viperlanguage-args-of-args args-of-args))))
+
+(defun viperlanguage-args-add-arg (arg)
+  "Add argument ARG to the argument list."
+  (when (not (member arg viperlanguage-args-set))
+    (setq-local viperlanguage-args-set (cons arg viperlanguage-args-set))
+    (viperlanguage-args-transfer)))
+
+(defun viperlanguage-args-region-after-colon ()
+  "Return the beginning and and of the region after ':' in the construction buffer at the current line."
+  (save-excursion
+    (beginning-of-line)
+    (if (equal (char-after) ?\[)
+        (progn
+          (forward-char 4)
+          (let ((s (point)))
+            (while (and (not (equal (char-after) ?\n)) (not (equal (char-after) ?:)) (not (eobp)))
+              (forward-char))
+            (when (equal (char-after) ?:)
+              (let ((s1 (point)))
+                (while (and (not (equal (char-after) ?\n)) (not (eobp)))
+                  (forward-char))
+                (cons s1 (point))))))
+      nil)))
+
+(defun viperlanguage-args-remove-arg (arg)
+  "Remove argument ARG from the argument list."
+  (setq-local viperlanguage-args-set (delete arg viperlanguage-args-set))
+  (setq-local viperlanguage-args-of-args (assoc-delete-all arg viperlanguage-args-of-args))
+  (let ((r (viperlanguage-args-region-after-colon)))
+    (when r
+      (delete-region (car r) (cdr r))))
+  (viperlanguage-args-transfer))
+
+(defun viperlanguage-args-get-arg ()
+  "Return the argument text contained in a line of the args construction buffer."
+  (save-excursion
+    (beginning-of-line)
+    (forward-char 4)
+    (let ((s (point)))
+      (while (and (not (equal (char-after) ?\n)) (not (equal (char-after) ?:)) (not (eobp)))
+        (forward-char))
+      (buffer-substring s (point)))))
+
+(defun viperlanguage-args-print-doc ()
+  "Print the documentation of the argument under point."
+  (interactive)
+  (message "%s" (cdr (assoc (viperlanguage-args-get-arg) viperlanguage-args-doc 'equal))))
+
+(defun viperlanguage-args-check-uncheck-arg (&optional append)
+  "Toggle the appearance of the argument in the current line of the construction buffer in the argument list.  When APPEND is set to t, args of args are appended to the current arg."
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (when (equal (char-after) ?\[)
+      (forward-char)
+      (setq-local buffer-read-only nil)
+      (if (or (eq (char-after) ? ) append)
+          (progn
+            (let ((sofar "")
+                  (reg (viperlanguage-args-region-after-colon)))
+              (delete-char 1)
+              (insert (propertize "X" 'face 'viperlanguage-verified-face))
+              (forward-char 2)
+              (let ((arg (viperlanguage-args-get-arg)))
+                (when (and append reg (member arg viperlanguage-args-that-need-many-args))
+                  (setq sofar (buffer-substring (1+ (car reg)) (cdr reg))))
+                (viperlanguage-args-add-arg arg)
+                (when (assoc arg viperlanguage-args-that-need-args)
+                  (let ((arg-of-arg (concat (funcall (cdr (assoc arg viperlanguage-args-that-need-args))) sofar)))
+                    (setq-local viperlanguage-args-of-args (cons (cons arg arg-of-arg) (assoc-delete-all arg viperlanguage-args-of-args)))
+                    (when reg
+                      (delete-region (car reg) (cdr reg)))
+                    (end-of-line)
+                    (insert (concat ": " (propertize (format "%s" arg-of-arg) 'face 'viperlanguage-argument-face)))))))
+            (viperlanguage-args-transfer))
+        (delete-char 1)
+        (insert-char ? )
+        (viperlanguage-args-remove-arg (viperlanguage-args-get-arg))))
+    (setq-local buffer-read-only t)))
+
+(defun viperlanguage-args-add-arg-of-arg ()
+  "Toggle on the argument in this line and if it already has arguments, add to the existing ones."
+  (interactive)
+  (viperlanguage-args-check-uncheck-arg t))
+
+(defun viperlanguage-args-quit ()
+  "Quit the arguments construction buffer."
+  (interactive)
+  (let ((og viperlanguage-args-original-buffer))
+    (kill-buffer)
+    (pop-to-buffer og)))
+
+(defvar viperlanguage-args-mode-map nil "Keymap for viperlanguage-args.")
+
+(when (not viperlanguage-args-mode-map)
+  (setq viperlanguage-args-mode-map (make-sparse-keymap))
+  (define-key viperlanguage-args-mode-map (kbd "n") 'next-line)
+  (define-key viperlanguage-args-mode-map (kbd "p") 'previous-line)
+  (define-key viperlanguage-args-mode-map (kbd "c") 'viperlanguage-args-check-uncheck-arg)
+  (define-key viperlanguage-args-mode-map (kbd "a") 'viperlanguage-args-add-arg-of-arg)
+  (define-key viperlanguage-args-mode-map (kbd "d") 'viperlanguage-args-print-doc)
+  (define-key viperlanguage-args-mode-map (kbd "q") 'viperlanguage-args-quit)
+  (define-key viperlanguage-args-mode-map (kbd "s") 'viperlanguage-args-save)
+  (define-key viperlanguage-args-mode-map (kbd "l") 'viperlanguage-args-load))
+
+(define-derived-mode viperlanguage-args-mode fundamental-mode
+  "viperlanguage-args mode"
+  "Major mode for selecting arguments passed to viperlanguage in a construction buffer"
+  (use-local-map viperlanguage-args-mode-map)
+  (read-only-mode t))
+
 ;;;###autoload
 
 (defvar viperlanguage-mode-map nil "Keymap for viperlanguage-mode.")
@@ -399,6 +760,7 @@
   (define-key viperlanguage-mode-map (kbd "C-c C-v") 'viperlanguage-verify)
   (define-key viperlanguage-mode-map (kbd "C-c C-x") 'viperlanguage-stop-server)
   (define-key viperlanguage-mode-map (kbd "C-c C-b") 'viperlanguage-change-backend)
+  (define-key viperlanguage-mode-map (kbd "C-c C-a") 'viperlanguage-edit-args)
   (define-key viperlanguage-mode-map (kbd "}") 'viperlanguage-brace-and-indent))
 
 
@@ -419,6 +781,9 @@
   (setq comment-end "")
   (cursor-sensor-mode)
   (setq global-mode-string (or global-mode-string '("")))
+  (setq-local viperlanguage-args-doc viperlanguage-silicon-args-doc)
+  (setq-local viperlanguage-args-that-need-args viperlanguage-silicon-args-that-need-args)
+  (setq-local viperlanguage-args-that-need-many-args viperlanguage-silicon-args-that-need-many-args)
   (unless (member '(:eval (viperlanguage-mode-line)) global-mode-string)
     (setq global-mode-string (append global-mode-string '((:eval (viperlanguage-mode-line)))))))
 
