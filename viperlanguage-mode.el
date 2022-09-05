@@ -96,7 +96,7 @@
 (setq viperlanguage-keywords '("domain" "axiom" "method" "while" "label" "goto" "var" "import" "function" "predicate" "field" "if" "else" "returns"))
 (setq viperlanguage-types '("Ref" "Bool" "Int" "Rational" "Perm" "Seq" "Set" "Multiset"))
 (setq viperlanguage-constants '("true" "false"))
-(setq viperlanguage-events '("exists" "forall" "invariant" "apply" "requires" "ensures" "fold" "unfold" "inhale" "exhale" "assert" "unfolding" "in" "forperm" "package"))
+(setq viperlanguage-events '("exists" "forall" "invariant" "apply" "requires" "ensures" "fold" "unfold" "inhale" "assume" "exhale" "assert" "unfolding" "in" "forperm" "package"))
 (setq viperlanguage-functions '())
 
 ;; generate regex string for each category of keywords
