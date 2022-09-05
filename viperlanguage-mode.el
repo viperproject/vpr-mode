@@ -258,7 +258,7 @@
   (interactive)
   (when (not viperlanguage-server-port)
     (let ((viperlanguage-viperserver (concat (file-name-as-directory viperlanguage-viper-path) "backends/viperserver.jar")))
-      (let ((b (format "%s" (async-shell-command (format "java -jar %s" viperlanguage-viperserver)))))
+      (let ((b (format "%s" (async-shell-command (format "java -jar -Xss128m %s" viperlanguage-viperserver)))))
         (string-match "window [1234567890]* on \\(.*\\)>" b)
         (setq viperlanguage-async-buffer (match-string 1 b))
         (setq viperlanguage-async-timer (run-with-timer 1 1 'viperlanguage-read-async))))))
@@ -759,7 +759,7 @@
                   (setq sofar (buffer-substring (1+ (car reg)) (cdr reg))))
                 (viperlanguage-args-add-arg arg)
                 (when (assoc arg viperlanguage-args-that-need-args)
-                  (let ((arg-of-arg (concat (funcall (cdr (assoc arg viperlanguage-args-that-need-args))) sofar)))
+                  (let ((arg-of-arg (concat (format "%s" (funcall (cdr (assoc arg viperlanguage-args-that-need-args)))) sofar)))
                     (setq-local viperlanguage-args-of-args (cons (cons arg arg-of-arg) (assoc-delete-all arg viperlanguage-args-of-args)))
                     (when reg
                       (delete-region (car reg) (cdr reg)))
