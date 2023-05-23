@@ -29,7 +29,7 @@
 (defvar viperlanguage-z3-path nil "The location of Z3.")
 (defvar viperlanguage-boogie-path nil "The location of Boogie.")
 (defvar viperlanguage-server-port nil "Holds the port where the Viper server is listening.")
-(defvar viperlanguage-default-tab-width 4 "Space-tab equivalence in a Viper program.")
+(defvar viperlanguage-default-tab-width 2 "Space-tab equivalence in a Viper program.")
 (defvar viperlanguage-async-buffer nil "The buffer in which Viper server is running.")
 (defvar viperlanguage-async-timer nil "Holds the timer of the function ran to identify the Viper server port.")
 (defvar-local viperlanguage-backend "silicon" "The backend that should be used by Viper.")
