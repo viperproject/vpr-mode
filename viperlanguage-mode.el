@@ -34,7 +34,7 @@
 (defvar-local viperlanguage-is-verified nil "Holds the status of the program regarding its verification by Viper.")
 (defvar-local viperlanguage-has-errors nil "Is set to true when there are results with a verification status of failure.")
 (defvar-local viperlanguage-has-exceptions nil "Is set to true when an exception is raised by the server.")
-(defvar viperlanguage-viper-path nil "The location of Viper.")
+(defvar viperlanguage-viperserver-path nil "The location of Viper.")
 (defvar viperlanguage-z3-path nil "The location of Z3.")
 (defvar viperlanguage-boogie-path nil "The location of Boogie.")
 (defvar viperlanguage-server-port nil "Holds the port where the Viper server is listening.")
@@ -257,7 +257,7 @@
   "Start the Viper server."
   (interactive)
   (when (not viperlanguage-server-port)
-    (let ((viperlanguage-viperserver (concat (file-name-as-directory viperlanguage-viper-path) "backends/viperserver.jar")))
+    (let ((viperlanguage-viperserver viperlanguage-viperserver-path))
       (let ((b (format "%s" (async-shell-command (format "java -jar -Xss128m %s" viperlanguage-viperserver)))))
         (string-match "window [1234567890]* on \\(.*\\)>" b)
         (setq viperlanguage-async-buffer (match-string 1 b))
