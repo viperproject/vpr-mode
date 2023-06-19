@@ -1,11 +1,11 @@
-;;; viperlanguage-mode.el --- Syntax highlighting for Viper -*- lexical-binding: t -*-
+;;; vpr-mode.el --- Syntax highlighting for Viper -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Dionisios Spiliopoulos
 
 ;; Author: Dionisios Spiliopoulos <dennisspiliopoylos@gmail.com>
 ;; Keywords: lisp
 ;; Version: 0.0.1
-;; URL: https://github.com/Dspil/viperlanguage-mode
+;; URL: https://github.com/Dspil/vpr-mode
 ;; Package-Requires: ((emacs "27.1") (request "0.3.2"))
 
 ;; This Source Code Form is subject to the terms of the Mozilla Public
@@ -831,4 +831,4 @@
 (add-to-list 'auto-mode-alist '("\\.vpr" . vpr-mode))
 
 (provide 'vpr-mode)
-;;; viperlanguage-mode.el ends here
+;;; vpr-mode.el ends here
