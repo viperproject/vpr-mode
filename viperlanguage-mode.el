@@ -21,24 +21,24 @@
 
 ;; Variables
 
-(defvar-local viperlanguage-highlight-overlays nil "Highglight overlays of errors reported by Viper.")
-(defvar-local viperlanguage-is-verified nil "Holds the status of the program regarding its verification by Viper.")
-(defvar-local viperlanguage-has-errors nil "Is set to true when there are results with a verification status of failure.")
-(defvar-local viperlanguage-has-exceptions nil "Is set to true when an exception is raised by the server.")
-(defvar viperlanguage-viperserver-path nil "The location of Viperserver jar file.")
-(defvar viperlanguage-z3-path nil "The location of Z3.")
-(defvar viperlanguage-boogie-path nil "The location of Boogie.")
-(defvar viperlanguage-server-port nil "Holds the port where the Viper server is listening.")
-(defvar viperlanguage-default-tab-width 2 "Space-tab equivalence in a Viper program.")
-(defvar viperlanguage-async-buffer nil "The buffer in which Viper server is running.")
-(defvar viperlanguage-async-timer nil "Holds the timer of the function ran to identify the Viper server port.")
-(defvar-local viperlanguage-backend "silicon" "The backend that should be used by Viper.")
-(defvar-local viperlanguage-backend-options "--disableCaching --z3Exe=%s")
-(defvar-local viperlanguage-carbon-options "--boogieExe=%s" "The carbon backend option that Viper should use.")
+(defvar-local vpr-highlight-overlays nil "Highglight overlays of errors reported by Viper.")
+(defvar-local vpr-is-verified nil "Holds the status of the program regarding its verification by Viper.")
+(defvar-local vpr-has-errors nil "Is set to true when there are results with a verification status of failure.")
+(defvar-local vpr-has-exceptions nil "Is set to true when an exception is raised by the server.")
+(defvar vpr-viperserver-path nil "The location of Viperserver jar file.")
+(defvar vpr-z3-path nil "The location of Z3.")
+(defvar vpr-boogie-path nil "The location of Boogie.")
+(defvar vpr-server-port nil "Holds the port where the Viper server is listening.")
+(defvar vpr-default-tab-width 2 "Space-tab equivalence in a Viper program.")
+(defvar vpr-async-buffer nil "The buffer in which Viper server is running.")
+(defvar vpr-async-timer nil "Holds the timer of the function ran to identify the Viper server port.")
+(defvar-local vpr-backend "silicon" "The backend that should be used by Viper.")
+(defvar-local vpr-backend-options "--disableCaching --z3Exe=%s")
+(defvar-local vpr-carbon-options "--boogieExe=%s" "The carbon backend option that Viper should use.")
 
 ;; helper functions
 
-(defun viperlanguage-pos-at-line-col (lc buffer)
+(defun vpr-pos-at-line-col (lc buffer)
   "Find the absolute position given by row column in LC in a BUFFER."
   (save-excursion
     (with-current-buffer buffer
@@ -51,79 +51,79 @@
 
 ;; faces
 
-(defgroup viperlanguage-faces nil
-  "Viperlanguage highlight faces."
+(defgroup vpr-faces nil
+  "Vpr highlight faces."
   :group 'tools)
 
-(defface viperlanguage-error
+(defface vpr-error
   '((((supports :underline (:style wave)))
      :underline (:style wave :color "Red1"))
     (t
      :underline t :inherit error))
-  "Viperlanguage face for errors."
-  :group 'viperlanguage-faces)
+  "Vpr face for errors."
+  :group 'vpr-faces)
 
-(defface viperlanguage-verified-face
+(defface vpr-verified-face
   '((t (:weight bold :foreground "Green")))
   "The face used to highlight succesful verification.")
 
-(defface viperlanguage-backend-face
+(defface vpr-backend-face
   '((t (:weight bold :foreground "#81d4fa")))
   "The face used to highlight the backend in modeline.")
 
-(defface viperlanguage-unverified-face
+(defface vpr-unverified-face
   '((t (:weight bold :foreground "Red")))
   "The face used to highlight failed verification.")
 
-(defface viperlanguage-notran-face
+(defface vpr-notran-face
   '((t (:weight bold :foreground "Orange")))
   "The face used to highlight not run verification.")
 
-(defface viperlanguage-argument-face
+(defface vpr-argument-face
   '((t (:foreground "Grey")))
   "The face used to distinguish args from args of args in the arguments construction buffer.")
 
 ;; define several category of keywords
-(setq viperlanguage-keywords '("domain" "axiom" "method" "while" "label" "goto" "var" "import" "function" "predicate" "field" "if" "else" "returns"))
-(setq viperlanguage-types '("Ref" "Bool" "Int" "Rational" "Perm" "Seq" "Set" "Multiset"))
-(setq viperlanguage-constants '("true" "false"))
-(setq viperlanguage-events '("exists" "forall" "invariant" "apply" "requires" "ensures" "fold" "unfold" "inhale" "assume" "exhale" "assert" "unfolding" "in" "forperm" "package" "decreases"))
-(setq viperlanguage-functions '())
+(setq vpr-keywords '("domain" "axiom" "method" "while" "label" "goto" "var" "import" "function" "predicate" "field" "if" "else" "returns"))
+(setq vpr-types '("Ref" "Bool" "Int" "Rational" "Perm" "Seq" "Set" "Multiset"))
+(setq vpr-constants '("true" "false"))
+(setq vpr-events '("exists" "forall" "invariant" "apply" "requires" "ensures" "fold" "unfold" "inhale" "assume" "exhale" "assert" "unfolding" "in" "forperm" "package" "decreases"))
+(setq vpr-functions '())
 
 ;; generate regex string for each category of keywords
-(setq viperlanguage-keywords-regexp (regexp-opt viperlanguage-keywords 'words))
-(setq viperlanguage-type-regexp (regexp-opt viperlanguage-types 'words))
-(setq viperlanguage-constant-regexp (regexp-opt viperlanguage-constants 'words))
-(setq viperlanguage-event-regexp (regexp-opt viperlanguage-events 'words))
-(setq viperlanguage-functions-regexp (regexp-opt viperlanguage-functions 'words))
+(setq vpr-keywords-regexp (regexp-opt vpr-keywords 'words))
+(setq vpr-type-regexp (regexp-opt vpr-types 'words))
+(setq vpr-constant-regexp (regexp-opt vpr-constants 'words))
+(setq vpr-event-regexp (regexp-opt vpr-events 'words))
+(setq vpr-functions-regexp (regexp-opt vpr-functions 'words))
 
 ;; create the list for font-lock.
 ;; each category of keyword is given a particular face
-(setq viperlanguage-font-lock-keywords
+(setq vpr-font-lock-keywords
       `(
-        (,viperlanguage-type-regexp . font-lock-type-face)
-        (,viperlanguage-constant-regexp . font-lock-constant-face)
-        (,viperlanguage-event-regexp . font-lock-builtin-face)
-        (,viperlanguage-functions-regexp . font-lock-function-name-face)
-        (,viperlanguage-keywords-regexp . font-lock-keyword-face)))
+        (,vpr-type-regexp . font-lock-type-face)
+        (,vpr-constant-regexp . font-lock-constant-face)
+        (,vpr-event-regexp . font-lock-builtin-face)
+        (,vpr-functions-regexp . font-lock-function-name-face)
+        (,vpr-keywords-regexp . font-lock-keyword-face)))
 
 ;; clear memory. no longer needed
-(setq viperlanguage-keywords nil)
-(setq viperlanguage-types nil)
-(setq viperlanguage-constants nil)
-(setq viperlanguage-events nil)
-(setq viperlanguage-functions nil)
+(setq vpr-keywords nil)
+(setq vpr-types nil)
+(setq vpr-constants nil)
+(setq vpr-events nil)
+(setq vpr-functions nil)
 
 ;; clear memory. no longer needed
-(setq viperlanguage-keywords-regexp nil)
-(setq viperlanguage-types-regexp nil)
-(setq viperlanguage-constants-regexp nil)
-(setq viperlanguage-events-regexp nil)
-(setq viperlanguage-functions-regexp nil)
+(setq vpr-keywords-regexp nil)
+(setq vpr-types-regexp nil)
+(setq vpr-constants-regexp nil)
+(setq vpr-events-regexp nil)
+(setq vpr-functions-regexp nil)
 
 
 ;; indentation
-(defun viperlanguage-count-braces ()
+(defun vpr-count-braces ()
   "Return a number that corresponds to how many more curly braces or parentheses have been opened than closed in the current line."
   (let ((s (thing-at-point 'line t))
 	      (i 0)
@@ -136,13 +136,13 @@
       (setq i (1+ i)))
     res))
 
-(defun viperlanguage-only-braces ()
+(defun vpr-only-braces ()
   "Check if the current line has only closing braces or parentheses."
   (save-excursion
     (beginning-of-line)
     (looking-at-p "^[\t })]+$")))
 
-(defun viperlanguage-indent-line ()
+(defun vpr-indent-line ()
   "Indent current line as Viper code."
   (interactive)
   (save-excursion
@@ -152,20 +152,20 @@
 	      (beginning-of-line)
 	      (if (bobp)
 	          (indent-line-to 0)
-	        (setq curindent (viperlanguage-count-braces))
+	        (setq curindent (vpr-count-braces))
 	        (while beg
 	          (forward-line -1)
-	          (setq curindent (+ curindent (viperlanguage-count-braces)))
+	          (setq curindent (+ curindent (vpr-count-braces)))
 	          (setq beg (or (and (not (bobp)) ( looking-at "[ \t]*\n")) (and (not (bobp)) (not (eq (current-indentation) 0))))))
 	        (when (< curindent 0)
 	          (setq curindent 0))))
       (let (fix)
-        (if (> (viperlanguage-count-braces) 0)
+        (if (> (vpr-count-braces) 0)
 	          (setq fix -1)
-          (if (and (< (viperlanguage-count-braces) 0) (not (viperlanguage-only-braces)))
+          (if (and (< (vpr-count-braces) 0) (not (vpr-only-braces)))
               (setq fix +1)
 	          (setq fix 0)))
-        (indent-line-to (* (+ curindent fix) viperlanguage-default-tab-width)))))
+        (indent-line-to (* (+ curindent fix) vpr-default-tab-width)))))
   (let ((pos (point))
         begpos)
     (save-excursion
@@ -174,130 +174,130 @@
     (when (equal pos begpos)
       (skip-syntax-forward "\s"))))
 
-(defun viperlanguage-brace-and-indent ()
+(defun vpr-brace-and-indent ()
   "Insert a closing brace and indent line."
   (interactive)
   (insert-char ?})
-  (viperlanguage-indent-line))
+  (vpr-indent-line))
 
 ;;; configure
 
-(defun viperlanguage-change-backend ()
+(defun vpr-change-backend ()
   "Alternate the backend from carbon to silicon and vice versa."
   (interactive)
-  (if (equal viperlanguage-backend "carbon")
+  (if (equal vpr-backend "carbon")
       (progn
-        (setq-local viperlanguage-backend "silicon")
-        (setq-local viperlanguage-carbon-args-set viperlanguage-args-set)
-        (setq-local viperlanguage-carbon-args-of-args viperlanguage-args-of-args)
-        (setq-local viperlanguage-args-set viperlanguage-silicon-args-set)
-        (setq-local viperlanguage-args-of-args viperlanguage-silicon-args-of-args)
-        (setq-local viperlanguage-args-doc viperlanguage-silicon-args-doc)
-        (setq-local viperlanguage-args-that-need-args viperlanguage-silicon-args-that-need-args)
-        (setq-local viperlanguage-args-that-need-many-args viperlanguage-silicon-args-that-need-many-args))
-    (setq-local viperlanguage-backend "carbon")
-    (setq-local viperlanguage-silicon-args-set viperlanguage-args-set)
-    (setq-local viperlanguage-silicon-args-of-args viperlanguage-args-of-args)
-    (setq-local viperlanguage-args-set viperlanguage-carbon-args-set)
-    (setq-local viperlanguage-args-of-args viperlanguage-carbon-args-of-args)
-    (setq-local viperlanguage-args-doc viperlanguage-carbon-args-doc)
-    (setq-local viperlanguage-args-that-need-args viperlanguage-carbon-args-that-need-args)
-    (setq-local viperlanguage-args-that-need-many-args viperlanguage-carbon-args-that-need-many-args))
+        (setq-local vpr-backend "silicon")
+        (setq-local vpr-carbon-args-set vpr-args-set)
+        (setq-local vpr-carbon-args-of-args vpr-args-of-args)
+        (setq-local vpr-args-set vpr-silicon-args-set)
+        (setq-local vpr-args-of-args vpr-silicon-args-of-args)
+        (setq-local vpr-args-doc vpr-silicon-args-doc)
+        (setq-local vpr-args-that-need-args vpr-silicon-args-that-need-args)
+        (setq-local vpr-args-that-need-many-args vpr-silicon-args-that-need-many-args))
+    (setq-local vpr-backend "carbon")
+    (setq-local vpr-silicon-args-set vpr-args-set)
+    (setq-local vpr-silicon-args-of-args vpr-args-of-args)
+    (setq-local vpr-args-set vpr-carbon-args-set)
+    (setq-local vpr-args-of-args vpr-carbon-args-of-args)
+    (setq-local vpr-args-doc vpr-carbon-args-doc)
+    (setq-local vpr-args-that-need-args vpr-carbon-args-that-need-args)
+    (setq-local vpr-args-that-need-many-args vpr-carbon-args-that-need-many-args))
   (force-mode-line-update))
 
-(defun viperlanguage-edit-args ()
+(defun vpr-edit-args ()
   "Spawn the construction buffer for the arguments."
   (interactive)
   (let ((cur-buf (buffer-name))
         (arg-buf (format "%s%s" (current-buffer) "~args"))
-        (arg-set viperlanguage-args-set)
-        (args-of-args viperlanguage-args-of-args)
-        (args-doc viperlanguage-args-doc)
-        (args-that-need-args viperlanguage-args-that-need-args)
-        (args-that-need-many-args viperlanguage-args-that-need-many-args))
+        (arg-set vpr-args-set)
+        (args-of-args vpr-args-of-args)
+        (args-doc vpr-args-doc)
+        (args-that-need-args vpr-args-that-need-args)
+        (args-that-need-many-args vpr-args-that-need-many-args))
     (with-current-buffer (get-buffer-create arg-buf)
-      (viperlanguage-args-mode)
-      (setq-local viperlanguage-args-original-buffer cur-buf)
-      (setq-local viperlanguage-args-set arg-set)
-      (setq-local viperlanguage-args-of-args args-of-args)
-      (setq-local viperlanguage-args-doc args-doc)
-      (setq-local viperlanguage-args-that-need-args args-that-need-args)
-      (setq-local viperlanguage-args-that-need-many-args args-that-need-many-args)
-      (viperlanguage-populate-args-buffer))
+      (vpr-args-mode)
+      (setq-local vpr-args-original-buffer cur-buf)
+      (setq-local vpr-args-set arg-set)
+      (setq-local vpr-args-of-args args-of-args)
+      (setq-local vpr-args-doc args-doc)
+      (setq-local vpr-args-that-need-args args-that-need-args)
+      (setq-local vpr-args-that-need-many-args args-that-need-many-args)
+      (vpr-populate-args-buffer))
     (pop-to-buffer arg-buf)))
 
 ;;; make requests to server
 
-(defun viperlanguage-request-url (cmd)
+(defun vpr-request-url (cmd)
   "Return the url for a request to the viper server given that we want to execute CMD."
-  (format "http://localhost:%s/%s" viperlanguage-server-port cmd))
+  (format "http://localhost:%s/%s" vpr-server-port cmd))
 
-(defun viperlanguage-read-async ()
+(defun vpr-read-async ()
   "Try to find the port in which the Viper server is listening."
   (interactive)
-  (with-current-buffer viperlanguage-async-buffer
+  (with-current-buffer vpr-async-buffer
     (goto-char (point-min))
     (while (not (eobp))
       (when (looking-at "ViperServer online at http://localhost:[0123456789]*\n")
-        (setq viperlanguage-server-port (substring (thing-at-point 'line t) 39 -1))
-        (cancel-timer viperlanguage-async-timer)
-        (setq viperlanguage-async-timer nil))
+        (setq vpr-server-port (substring (thing-at-point 'line t) 39 -1))
+        (cancel-timer vpr-async-timer)
+        (setq vpr-async-timer nil))
       (forward-line 1))))
 
-(defun viperlanguage-start-server ()
+(defun vpr-start-server ()
   "Start the Viper server."
   (interactive)
-  (when (not viperlanguage-server-port)
-    (let ((viperlanguage-viperserver viperlanguage-viperserver-path))
-      (let ((b (format "%s" (async-shell-command (format "java -jar -Xss128m %s" viperlanguage-viperserver)))))
+  (when (not vpr-server-port)
+    (let ((vpr-viperserver vpr-viperserver-path))
+      (let ((b (format "%s" (async-shell-command (format "java -jar -Xss128m %s" vpr-viperserver)))))
         (string-match "window [1234567890]* on \\(.*\\)>" b)
-        (setq viperlanguage-async-buffer (match-string 1 b))
-        (setq viperlanguage-async-timer (run-with-timer 1 1 'viperlanguage-read-async))))))
+        (setq vpr-async-buffer (match-string 1 b))
+        (setq vpr-async-timer (run-with-timer 1 1 'vpr-read-async))))))
 
-(defun viperlanguage-stop-server ()
+(defun vpr-stop-server ()
   "Stop the Viper server."
   (interactive)
-  (when viperlanguage-server-port
-    (request (viperlanguage-request-url "exit")
-      (setq viperlanguage-server-port nil)
-      (setq viperlanguage-async-timer nil))))
+  (when vpr-server-port
+    (request (vpr-request-url "exit")
+      (setq vpr-server-port nil)
+      (setq vpr-async-timer nil))))
 
-(defun viperlanguage-verify ()
+(defun vpr-verify ()
   "Ask the Viper server to verify the file corresponding to the current buffer."
   (interactive)
-  (when (eq major-mode 'viperlanguage-mode)
-    (if viperlanguage-server-port
-        (viperlanguage-verify-file buffer-file-name (current-buffer))
-      (setq-local viperlanguage-is-verified nil)
-      (setq-local viperlanguage-has-errors nil)
-      (setq-local viperlanguage-has-exceptions nil)
+  (when (eq major-mode 'vpr-mode)
+    (if vpr-server-port
+        (vpr-verify-file buffer-file-name (current-buffer))
+      (setq-local vpr-is-verified nil)
+      (setq-local vpr-has-errors nil)
+      (setq-local vpr-has-exceptions nil)
       (message "No active viper server!"))))
 
-(defun viperlanguage-verify-file (file-path buffer)
+(defun vpr-verify-file (file-path buffer)
   "Verify the file with path FILE-PATH in the buffer BUFFER."
-  (setq-local viperlanguage-is-verified 3)
-  (setq-local viperlanguage-has-errors nil)
-  (setq-local viperlanguage-has-exceptions nil)
+  (setq-local vpr-is-verified 3)
+  (setq-local vpr-has-errors nil)
+  (setq-local vpr-has-exceptions nil)
   (force-mode-line-update)
-  (let ((opts (format "%s %s" (format  viperlanguage-backend-options viperlanguage-z3-path) (viperlanguage-args-serialize))))
-    (request (viperlanguage-request-url "verify")
+  (let ((opts (format "%s %s" (format  vpr-backend-options vpr-z3-path) (vpr-args-serialize))))
+    (request (vpr-request-url "verify")
       :type "POST"
       :data (json-encode
              (cons
               (cons "arg"
                     (format
                      "%s %s \"%s\""
-                     viperlanguage-backend opts file-path)) ()))
+                     vpr-backend opts file-path)) ()))
       :headers '(("Content-Type" . "application/json"))
       :parser 'json-read
       :success (cl-function
                 (lambda (&key data &allow-other-keys)
                   (let ((id (cdr (assoc 'id data))))
-                    (viperlanguage-get-verification id buffer)))))))
+                    (vpr-get-verification id buffer)))))))
 
-(defun viperlanguage-get-verification (id buffer)
+(defun vpr-get-verification (id buffer)
   "Get the verification result for id ID in buffer BUFFER."
-  (request (concat (viperlanguage-request-url "verify") (format "/%s" id))
+  (request (concat (vpr-request-url "verify") (format "/%s" id))
     :type "GET"
     :success (cl-function
               (lambda (&key data &allow-other-keys)
@@ -317,13 +317,13 @@
                             :array-type 'list))
                          (split-string data "\n")))))
                   (mapc (lambda (r)
-                          (viperlanguage-parse-results r buffer))
+                          (vpr-parse-results r buffer))
                         filtered))))))
 
-(defun viperlanguage-parse-results (data buffer)
+(defun vpr-parse-results (data buffer)
   "Parse the Viper results in DATA of the buffer BUFFER."
   (with-current-buffer buffer
-    (seq-do #'delete-overlay viperlanguage-highlight-overlays)
+    (seq-do #'delete-overlay vpr-highlight-overlays)
     (let* ((msg_body (alist-get 'msg_body data))
            (status (alist-get 'status msg_body))
            (details (alist-get 'details msg_body))
@@ -331,43 +331,43 @@
            (errors (alist-get 'errors result))
            (msg (alist-get 'message msg_body)))
       (when (equal (format "%s" (alist-get 'msg_type data)) "verification_result")
-        (viperlanguage-use-error-results status errors buffer))
+        (vpr-use-error-results status errors buffer))
       (when (equal (format "%s" (alist-get 'msg_type data)) "ast_construction_result")
-        (viperlanguage-use-ast-results status errors buffer))
+        (vpr-use-ast-results status errors buffer))
       (when (equal (format "%s" (alist-get 'msg_type data)) "exception_report")
-        (viperlanguage-use-exception-results msg)))))
+        (vpr-use-exception-results msg)))))
 
-(defun viperlanguage-use-exception-results (msg)
+(defun vpr-use-exception-results (msg)
   "Use the exception result.  Right now just print the MSG argument and stop the server."
   (message "%s" msg)
   (message "Exception! Shutting down server...")
-  (setq-local viperlanguage-has-exceptions t)
-  (viperlanguage-stop-server))
+  (setq-local vpr-has-exceptions t)
+  (vpr-stop-server))
 
-(defun viperlanguage-use-error-results (status errors buffer)
+(defun vpr-use-error-results (status errors buffer)
   "If STATUS is success then the program verified, otherwise parse each error in ERRORS seperately for the file in buffer BUFFER."
   (with-current-buffer buffer
     (if (equal (format "%s" status) "success")
-        (setq-local viperlanguage-is-verified 1)
-      (setq-local viperlanguage-is-verified 2)
-      (setq-local viperlanguage-has-errors t)
+        (setq-local vpr-is-verified 1)
+      (setq-local vpr-is-verified 2)
+      (setq-local vpr-has-errors t)
       (force-mode-line-update)
-      (mapc (lambda (err) (viperlanguage-handle-error err buffer)) errors))))
+      (mapc (lambda (err) (vpr-handle-error err buffer)) errors))))
 
-(defun viperlanguage-handle-error (err buffer)
+(defun vpr-handle-error (err buffer)
   "Handle a specific error ERR for the buffer BUFFER."
   (with-current-buffer buffer
     (let* ((position (alist-get 'position err))
            (starts (alist-get 'start position))
            (ends (alist-get 'end position))
-           (start (viperlanguage-pos-at-line-col (mapcar 'string-to-number (split-string starts ":")) buffer))
-           (end (viperlanguage-pos-at-line-col (mapcar 'string-to-number (split-string ends ":")) buffer))
+           (start (vpr-pos-at-line-col (mapcar 'string-to-number (split-string starts ":")) buffer))
+           (end (vpr-pos-at-line-col (mapcar 'string-to-number (split-string ends ":")) buffer))
            (text (alist-get 'text err)))
       (let ((ov (make-overlay
                  start
                  end)))
-        (push ov viperlanguage-highlight-overlays)
-        (overlay-put ov 'face 'viperlanguage-error)
+        (push ov vpr-highlight-overlays)
+        (overlay-put ov 'face 'vpr-error)
         (overlay-put ov 'help-echo text)
         (overlay-put ov
                      'cursor-sensor-functions
@@ -377,82 +377,82 @@
                           (message "%s" text)))))
         (message "%s" text)))))
 
-(defun viperlanguage-use-ast-results (status errors buffer)
+(defun vpr-use-ast-results (status errors buffer)
   "Handle the ast construction results using the STATUS of the construction and the ERRORS occured for BUFFER."
   (with-current-buffer buffer
     (when (equal (format "%s" status) "failure")
       (message "AST construction failed.")
-      (setq-local viperlanguage-is-verified 2)
-      (setq-local viperlanguage-has-errors t)
+      (setq-local vpr-is-verified 2)
+      (setq-local vpr-has-errors t)
       (force-mode-line-update)
-      (mapc (lambda (err) (viperlanguage-handle-ast-error err buffer)) errors))))
+      (mapc (lambda (err) (vpr-handle-ast-error err buffer)) errors))))
 
-(defun viperlanguage-handle-ast-error (err buffer)
+(defun vpr-handle-ast-error (err buffer)
   "Parse a specific error ERR regarding the ast construction of the program in BUFFER."
   (with-current-buffer buffer
     (let* ((position (alist-get 'position err))
            (start (alist-get 'start position))
-           (pos (viperlanguage-pos-at-line-col (mapcar 'string-to-number (split-string start ":")) buffer))
+           (pos (vpr-pos-at-line-col (mapcar 'string-to-number (split-string start ":")) buffer))
            (text (alist-get 'text err)))
       (let ((ov (make-overlay
                  pos
                  (1+ pos))))
-        (push ov viperlanguage-highlight-overlays)
-        (overlay-put ov 'face 'viperlanguage-error)
+        (push ov vpr-highlight-overlays)
+        (overlay-put ov 'face 'vpr-error)
         (overlay-put ov 'help-echo text)))))
 
-(defun viperlanguage-mode-line ()
+(defun vpr-mode-line ()
   "Return the string corresponding to the status of the verification for the current buffer."
-  (let ((b (concat "[Backend: " (propertize (format "%s" viperlanguage-backend) 'face 'viperlanguage-backend-face)
+  (let ((b (concat "[Backend: " (propertize (format "%s" vpr-backend) 'face 'vpr-backend-face)
                    " | State: ")))
-    (if (equal major-mode 'viperlanguage-mode)
-        (if (not viperlanguage-is-verified)
-            (concat b (propertize "Unknown" 'face 'viperlanguage-notran-face) "]")
-          (if (and (equal viperlanguage-is-verified 1) (not viperlanguage-has-exceptions))
-              (concat b (propertize "Verified" 'face 'viperlanguage-verified-face) "]")
-            (if (equal viperlanguage-is-verified 2)
-                (concat b (propertize "Unverified" 'face 'viperlanguage-unverified-face) "]")
-              (if viperlanguage-has-exceptions
-                  (concat b (propertize "Exception" 'face 'viperlanguage-unverified-face) "]")
-                (concat b (propertize "Verifying..." 'face 'viperlanguage-notran-face) "]")))))
+    (if (equal major-mode 'vpr-mode)
+        (if (not vpr-is-verified)
+            (concat b (propertize "Unknown" 'face 'vpr-notran-face) "]")
+          (if (and (equal vpr-is-verified 1) (not vpr-has-exceptions))
+              (concat b (propertize "Verified" 'face 'vpr-verified-face) "]")
+            (if (equal vpr-is-verified 2)
+                (concat b (propertize "Unverified" 'face 'vpr-unverified-face) "]")
+              (if vpr-has-exceptions
+                  (concat b (propertize "Exception" 'face 'vpr-unverified-face) "]")
+                (concat b (propertize "Verifying..." 'face 'vpr-notran-face) "]")))))
       "")))
 
 ;; ===============
 ;; arguments stuff
 ;; ===============
 
-(defvar-local viperlanguage-args-original-buffer nil "Holds the name of the viperlanguage file that corresponds to a viperlanguage arguments construction buffer.")
-(defvar-local viperlanguage-args-set nil "Holds the arguments of the viper backend.")
-(defvar-local viperlanguage-args-of-args nil "Holds arguments of arguments of the viper backend.")
-(defvar-local viperlanguage-args-doc nil "Holds arguments with their documentation depending on the backend.")
-(defvar-local viperlanguage-args-that-need-args nil "Holds arguments that need arguments depending on the backend.")
-(defvar-local viperlanguage-args-that-need-many-args nil "Holds arguments that need namy argumentds depending on the backend.")
+(defvar-local vpr-args-original-buffer nil "Holds the name of the vpr file that corresponds to a vpr arguments construction buffer.")
+(defvar-local vpr-args-set nil "Holds the arguments of the viper backend.")
+(defvar-local vpr-args-of-args nil "Holds arguments of arguments of the viper backend.")
+(defvar-local vpr-args-doc nil "Holds arguments with their documentation depending on the backend.")
+(defvar-local vpr-args-that-need-args nil "Holds arguments that need arguments depending on the backend.")
+(defvar-local vpr-args-that-need-many-args nil "Holds arguments that need namy argumentds depending on the backend.")
 
-(defvar-local viperlanguage-silicon-args-set nil "Holds the arguments of the silicon backend.")
-(defvar-local viperlanguage-silicon-args-of-args nil "Holds arguments of arguments of the silicon backend.")
+(defvar-local vpr-silicon-args-set nil "Holds the arguments of the silicon backend.")
+(defvar-local vpr-silicon-args-of-args nil "Holds arguments of arguments of the silicon backend.")
 
-(defvar-local viperlanguage-carbon-args-set nil "Holds the arguments of the silicon backend.")
-(defvar-local viperlanguage-carbon-args-of-args nil "Holds arguments of arguments of the silicon backend.")
+(defvar-local vpr-carbon-args-set nil "Holds the arguments of the silicon backend.")
+(defvar-local vpr-carbon-args-of-args nil "Holds arguments of arguments of the silicon backend.")
 
-(defun viperlanguage-args-initialize ()
+(defun vpr-args-initialize ()
   "Initialize all variables having something to do with arguments."
-  (setq-local viperlanguage-args-doc viperlanguage-silicon-args-doc)
-  (setq-local viperlanguage-args-that-need-args viperlanguage-silicon-args-that-need-args)
-  (setq-local viperlanguage-args-that-need-many-args viperlanguage-silicon-args-that-need-many-args)
-  (setq-local viperlanguage-carbon-args-set '("boogieExe"))
-  (setq-local viperlanguage-carbon-args-of-args `(("boogieExe" . ,viperlanguage-boogie-path))))
+  (setq-local vpr-args-doc vpr-silicon-args-doc)
+  (setq-local vpr-args-that-need-args vpr-silicon-args-that-need-args)
+  (setq-local vpr-args-that-need-many-args vpr-silicon-args-that-need-many-args)
+  (setq-local vpr-carbon-args-set '("boogieExe"))
+  (setq-local vpr-carbon-args-of-args `(("boogieExe" . ,vpr-boogie-path))))
 ;; getters
 
-(defun viperlanguage-args-mode-getter (prompt modes)
+(defun vpr-args-mode-getter (prompt modes)
   "Get a mode from a list of MODES presenting a PROMPT."
   (lambda ()
     (completing-read prompt modes nil t)))
 
-(defun viperlanguage-args-int-getter (prompt)
+(defun vpr-args-int-getter (prompt)
   "Get an integer presenting a PROMPT."
   (lambda () (read-number prompt)))
 
-(defun viperlanguage-args-multi-string-getter (prompt1 prompt2)
+(defun vpr-args-multi-string-getter (prompt1 prompt2)
   "Get multiple strings.  Each string is taken with PROMPT1 and between strings PROMPT2 asks the user if he wants to continue."
   (lambda ()
     (let ((s (read-string prompt1)))
@@ -462,7 +462,7 @@
 
 ;; arguments for silicon
 
-(defvar viperlanguage-silicon-args-doc
+(defvar vpr-silicon-args-doc
   '(("alternativeFunctionVerificationOrder" . "Calculate the order in which functions are verified and function axioms become available in an alternative way that takes dependencies between functions through predicate unfoldings into account. This is more complete in some cases (see Silicon issue #355) but less complete in others (see test all/issues/silicon/unofficial007).")
     ("assertionMode" . "Determines how assertion checks are encoded in SMTLIB. Options are 'pp' (push-pop) and 'cs' (soft constraints) (default: cs).")
     ("assertTimeout" . "Timeout (in ms) per SMT solver assertion (default: 0, i.e. no timeout).")
@@ -514,38 +514,38 @@
     ("help" . "Show help message"))
   "Documentation for silicon arguments.")
 
-(defvar viperlanguage-silicon-args-that-need-args
-  `(("assertionMode" . ,(viperlanguage-args-mode-getter "Assertion mode: " '("cs" "pp")))
-    ("assertTimeout" . ,(viperlanguage-args-int-getter "Assert timeout (in ms): "))
-    ("checkTimeout" . ,(viperlanguage-args-int-getter "Z3 check timeout (in ms): "))
-    ("counterexample" . ,(viperlanguage-args-mode-getter "Counterexample mode: " '("native" "variables" "mapped")))
+(defvar vpr-silicon-args-that-need-args
+  `(("assertionMode" . ,(vpr-args-mode-getter "Assertion mode: " '("cs" "pp")))
+    ("assertTimeout" . ,(vpr-args-int-getter "Assert timeout (in ms): "))
+    ("checkTimeout" . ,(vpr-args-int-getter "Z3 check timeout (in ms): "))
+    ("counterexample" . ,(vpr-args-mode-getter "Counterexample mode: " '("native" "variables" "mapped")))
     ("excludeMethods" . (lambda () (read-string "Exclude methods: ")))
     ("includeMethods" . (lambda () (read-string "Include methods: ")))
     ("logConfig" . (lambda () (read-file-name "SymbExLogger config file: ")))
-    ("logLevel" . ,(viperlanguage-args-mode-getter "Log level: " '("ALL" "TRACE" "DEBUG" "INFO" "WARN" "ERROR" "OFF")))
+    ("logLevel" . ,(vpr-args-mode-getter "Log level: " '("ALL" "TRACE" "DEBUG" "INFO" "WARN" "ERROR" "OFF")))
     ("mapAxiomatizationFile" . (lambda () (read-file-name "Map axiomatization file: ")))
-    ("maxHeuristicsDepth" . ,(viperlanguage-args-int-getter "Max heuristics depth: "))
+    ("maxHeuristicsDepth" . ,(vpr-args-int-getter "Max heuristics depth: "))
     ("multisetAxiomatizationFile" . (lambda () (read-file-name "Multiset axiomatization file: ")))
-    ("numberOfErrorsToReport" . ,(viperlanguage-args-int-getter "Number of errors (0 for all): "))
-    ("numberOfParallelVerifiers" . ,(viperlanguage-args-int-getter "Number of parallel verifiers: "))
+    ("numberOfErrorsToReport" . ,(vpr-args-int-getter "Number of errors (0 for all): "))
+    ("numberOfParallelVerifiers" . ,(vpr-args-int-getter "Number of parallel verifiers: "))
     ("plugin" . (lambda () (read-string "Plugins (multiple seperated with ':': ")))
-    ("qpSplitTimeout" . ,(viperlanguage-args-int-getter "QP split timeout (in ms): "))
-    ("recursivePredicateUnfoldings" . ,(viperlanguage-args-int-getter "Number of unfoldings: "))
+    ("qpSplitTimeout" . ,(vpr-args-int-getter "QP split timeout (in ms): "))
+    ("recursivePredicateUnfoldings" . ,(vpr-args-int-getter "Number of unfoldings: "))
     ("sequenceAxiomatizationFile" . (lambda () (read-file-name "Sequence axiomatization file: ")))
     ("setAxiomatizationFile" . (lambda () (read-file-name "Set axiomatization file: ")))
-    ("stateConsolidationMode" . ,(viperlanguage-args-mode-getter "Assertion Mode: " '("0" "1" "2" "3" "4")))
+    ("stateConsolidationMode" . ,(vpr-args-mode-getter "Assertion Mode: " '("0" "1" "2" "3" "4")))
     ("tempDirectory" . (lambda () (read-directory-name "Temp directory: ")))
-    ("timeout" . ,(viperlanguage-args-int-getter "Timeout (in s): "))
-    ("z3Args" . ,(viperlanguage-args-multi-string-getter "Z3 argument: " "Enter more arguments? "))
-    ("z3ConfigArgs" . ,(viperlanguage-args-multi-string-getter "Z3 config argument: " "Enter more arguments? "))
+    ("timeout" . ,(vpr-args-int-getter "Timeout (in s): "))
+    ("z3Args" . ,(vpr-args-multi-string-getter "Z3 argument: " "Enter more arguments? "))
+    ("z3ConfigArgs" . ,(vpr-args-multi-string-getter "Z3 config argument: " "Enter more arguments? "))
     ("z3Exe" . (lambda () (read-file-name "Z3 executable: ")))
     ("z3LogFile" . (lambda () (read-file-name "Z3 log file: ")))
     ("z3ResourcesPerMillisecond" . (lambda () (read-string "Resources per milliseconds: ")))
-    ("z3SaturationTimeout" . ,(viperlanguage-args-int-getter "Saturation timeout (in ms): "))
-    ("z3SaturationTimeoutWeights" . ,(viperlanguage-args-multi-string-getter "Saturation timeout weight: " "Enter more weights? ")))
+    ("z3SaturationTimeout" . ,(vpr-args-int-getter "Saturation timeout (in ms): "))
+    ("z3SaturationTimeoutWeights" . ,(vpr-args-multi-string-getter "Saturation timeout weight: " "Enter more weights? ")))
   "Viper arguments that take arguments and functions to ask them from the user.")
 
-(defvar viperlanguage-silicon-args-that-need-many-args
+(defvar vpr-silicon-args-that-need-many-args
   '("z3Args"
     "z3ConfigArgs"
     "z3SaturationTimeoutWeights")
@@ -553,7 +553,7 @@
 
 ;; arguments for carbon
 
-(defvar viperlanguage-carbon-args-doc
+(defvar vpr-carbon-args-doc
   '(("assumeInjectivityOnInhale" . "Assumes injectivity of the receiver expression when inhaling quantified permissions, instead of checking it.")
     ("boogieExe" . "Manually-specified full path to Boogie.exe executable (default: ${BOOGIE_EXE})")
     ("boogieOpt" . "Option(s) to pass-through as options to Boogie (changing the output generated by Boogie is not supported) (default: none)")
@@ -566,58 +566,58 @@
     ("help" . "Show help message"))
   "Documentation for carbon arguments.")
 
-(defvar viperlanguage-carbon-args-that-need-args
+(defvar vpr-carbon-args-that-need-args
   `(("boogieExe" . (lambda () (read-file-name "Boogie executable: ")))
     ("boogieOpt" . (lambda () (read-string "Boogie options: ")))
-    ("counterexample" . ,(viperlanguage-args-mode-getter "Counterexample mode: " '("native" "variables" "mapped")))
+    ("counterexample" . ,(vpr-args-mode-getter "Counterexample mode: " '("native" "variables" "mapped")))
     ("plugin" . (lambda () (read-string "Plugins (multiple seperated with ':': ")))
     ("print" . (lambda () (read-file-name "Filename: ")))
     ("proverLog" . (lambda () (read-file-name "Filename: ")))
     ("z3Exe" . (lambda () (read-file-name "Z3 executable: "))))
   "Viper arguments that take arguments and functions to ask them from the user.")
 
-(defvar viperlanguage-carbon-args-that-need-many-args nil
+(defvar vpr-carbon-args-that-need-many-args nil
   "Viper arguments that take many arguments.")
 
 ;; argument checking and unchecking logic
 
-(defun viperlanguage-args-serialize ()
+(defun vpr-args-serialize ()
   "Return the arguments string."
-  (let ((i viperlanguage-args-set)
+  (let ((i vpr-args-set)
         (s ""))
     (while i
       (let ((cur (car i))
             (next (cdr i)))
         (setq s (format "%s --%s" s cur))
-        (when (assoc cur viperlanguage-args-that-need-args)
-          (setq s (format "%s %s" s (cdr (assoc cur viperlanguage-args-of-args)))))
+        (when (assoc cur vpr-args-that-need-args)
+          (setq s (format "%s %s" s (cdr (assoc cur vpr-args-of-args)))))
         (setq i next)))
     s))
 
-(defun viperlanguage-dump (data filename)
+(defun vpr-dump (data filename)
   "Dump DATA in the file FILENAME."
   (with-temp-file filename
     (prin1 data (current-buffer))))
 
-(defun viperlanguage-load (filename)
+(defun vpr-load (filename)
   "Restore data from the file FILENAME."
   (with-temp-buffer
     (insert-file-contents filename)
     (cl-assert (bobp))
     (read (current-buffer))))
 
-(defun viperlanguage-args-save ()
+(defun vpr-args-save ()
   "Save the current argument configuration to the disk."
   (interactive)
   (let ((f (read-file-name "File to save configuration: ")))
-    (with-current-buffer viperlanguage-args-original-buffer
-      (viperlanguage-dump (list viperlanguage-backend (cons viperlanguage-silicon-args-set viperlanguage-silicon-args-of-args) (cons viperlanguage-carbon-args-set viperlanguage-carbon-args-of-args)) f))))
+    (with-current-buffer vpr-args-original-buffer
+      (vpr-dump (list vpr-backend (cons vpr-silicon-args-set vpr-silicon-args-of-args) (cons vpr-carbon-args-set vpr-carbon-args-of-args)) f))))
 
-(defun viperlanguage-args-load ()
+(defun vpr-args-load ()
   "Load an argument configuration from the disk."
   (interactive)
   (let* ((f (read-file-name "File name to load configuration: "))
-         (data (viperlanguage-load f))
+         (data (vpr-load f))
          (backend (car data))
          (silicon-args (nth 1 data))
          (carbon-args (nth 2 data))
@@ -625,71 +625,71 @@
          (silicon-args-of-args (cdr silicon-args))
          (carbon-args-set (car carbon-args))
          (carbon-args-of-args (cdr carbon-args)))
-    (with-current-buffer viperlanguage-args-original-buffer
-      (setq-local viperlanguage-backend backend)
-      (setq-local viperlanguage-silicon-args-set silicon-args-set)
-      (setq-local viperlanguage-carbon-args-set carbon-args-set)
-      (setq-local viperlanguage-silicon-args-of-args silicon-args-of-args)
-      (setq-local viperlanguage-carbon-args-of-args carbon-args-of-args)
-      (if (equal viperlanguage-backend "silicon")
+    (with-current-buffer vpr-args-original-buffer
+      (setq-local vpr-backend backend)
+      (setq-local vpr-silicon-args-set silicon-args-set)
+      (setq-local vpr-carbon-args-set carbon-args-set)
+      (setq-local vpr-silicon-args-of-args silicon-args-of-args)
+      (setq-local vpr-carbon-args-of-args carbon-args-of-args)
+      (if (equal vpr-backend "silicon")
           (progn
-            (setq-local viperlanguage-args-set viperlanguage-silicon-args-set)
-            (setq-local viperlanguage-args-of-args viperlanguage-silicon-args-of-args)
-            (setq-local viperlanguage-args-doc viperlanguage-silicon-args-doc)
-            (setq-local viperlanguage-args-that-need-args viperlanguage-silicon-args-that-need-args)
-            (setq-local viperlanguage-args-that-need-many-args viperlanguage-silicon-args-that-need-many-args))
-        (setq-local viperlanguage-args-set viperlanguage-carbon-args-set)
-        (setq-local viperlanguage-args-of-args viperlanguage-carbon-args-of-args)
-        (setq-local viperlanguage-args-doc viperlanguage-carbon-args-doc)
-        (setq-local viperlanguage-args-that-need-args viperlanguage-carbon-args-that-need-args)
-        (setq-local viperlanguage-args-that-need-many-args viperlanguage-carbon-args-that-need-many-args))
-      (viperlanguage-edit-args))))
+            (setq-local vpr-args-set vpr-silicon-args-set)
+            (setq-local vpr-args-of-args vpr-silicon-args-of-args)
+            (setq-local vpr-args-doc vpr-silicon-args-doc)
+            (setq-local vpr-args-that-need-args vpr-silicon-args-that-need-args)
+            (setq-local vpr-args-that-need-many-args vpr-silicon-args-that-need-many-args))
+        (setq-local vpr-args-set vpr-carbon-args-set)
+        (setq-local vpr-args-of-args vpr-carbon-args-of-args)
+        (setq-local vpr-args-doc vpr-carbon-args-doc)
+        (setq-local vpr-args-that-need-args vpr-carbon-args-that-need-args)
+        (setq-local vpr-args-that-need-many-args vpr-carbon-args-that-need-many-args))
+      (vpr-edit-args))))
 
-(defun viperlanguage-populate-args-buffer ()
+(defun vpr-populate-args-buffer ()
   "Insert the prelude and arguments wit their values so far in the current buffer."
   (setq-local buffer-read-only nil)
   (erase-buffer)
   (goto-char (point-min))
-  (insert "Viperlanguage argument selection buffer.\nCheck any argument needed with 'c'.\nAdd arguments to an argument with 'a'\nPrint documentation of argument with 'd'.\nSave configuraton with 's'.\nLoad configuration with 'l'.\nPress 'q' to exit.\n\n")
+  (insert "Vpr argument selection buffer.\nCheck any argument needed with 'c'.\nAdd arguments to an argument with 'a'\nPrint documentation of argument with 'd'.\nSave configuraton with 's'.\nLoad configuration with 'l'.\nPress 'q' to exit.\n\n")
   (let ((start-pos (point)))
-    (let ((i viperlanguage-args-doc))
+    (let ((i vpr-args-doc))
       (while i
         (let ((cur (car i))
               (next (cdr i)))
           (insert-char ?\[)
-          (if (member (car cur) viperlanguage-args-set)
-              (insert (propertize "X" 'face 'viperlanguage-verified-face))
+          (if (member (car cur) vpr-args-set)
+              (insert (propertize "X" 'face 'vpr-verified-face))
             (insert-char ? ))
           (insert "] ")
           (insert (car cur))
-          (when (and (member (car cur) viperlanguage-args-set) (assoc (car cur) viperlanguage-args-that-need-args))
-            (insert (concat ": " (propertize (format "%s" (cdr (assoc (car cur) viperlanguage-args-of-args))) 'face 'viperlanguage-argument-face))))
+          (when (and (member (car cur) vpr-args-set) (assoc (car cur) vpr-args-that-need-args))
+            (insert (concat ": " (propertize (format "%s" (cdr (assoc (car cur) vpr-args-of-args))) 'face 'vpr-argument-face))))
           (insert-char ?\n)
           (setq i next))))
     (setq-local buffer-read-only t)
     (goto-char start-pos)))
 
-(defun viperlanguage-args-transfer ()
-  "Transfer the change to the arguments at the main viperlanguage buffer."
-  (let ((args viperlanguage-args-set)
-        (args-of-args viperlanguage-args-of-args))
-    (with-current-buffer viperlanguage-args-original-buffer
-      (setq-local viperlanguage-args-set args)
-      (setq-local viperlanguage-args-of-args args-of-args)
-      (if (equal viperlanguage-backend "carbon")
+(defun vpr-args-transfer ()
+  "Transfer the change to the arguments at the main vpr buffer."
+  (let ((args vpr-args-set)
+        (args-of-args vpr-args-of-args))
+    (with-current-buffer vpr-args-original-buffer
+      (setq-local vpr-args-set args)
+      (setq-local vpr-args-of-args args-of-args)
+      (if (equal vpr-backend "carbon")
           (progn
-            (setq-local viperlanguage-carbon-args-set viperlanguage-args-set)
-            (setq-local viperlanguage-carbon-args-of-args viperlanguage-args-of-args))
-        (setq-local viperlanguage-silicon-args-set viperlanguage-args-set)
-        (setq-local viperlanguage-silicon-args-of-args viperlanguage-args-of-args)))))
+            (setq-local vpr-carbon-args-set vpr-args-set)
+            (setq-local vpr-carbon-args-of-args vpr-args-of-args))
+        (setq-local vpr-silicon-args-set vpr-args-set)
+        (setq-local vpr-silicon-args-of-args vpr-args-of-args)))))
 
-(defun viperlanguage-args-add-arg (arg)
+(defun vpr-args-add-arg (arg)
   "Add argument ARG to the argument list."
-  (when (not (member arg viperlanguage-args-set))
-    (setq-local viperlanguage-args-set (cons arg viperlanguage-args-set))
-    (viperlanguage-args-transfer)))
+  (when (not (member arg vpr-args-set))
+    (setq-local vpr-args-set (cons arg vpr-args-set))
+    (vpr-args-transfer)))
 
-(defun viperlanguage-args-region-after-colon ()
+(defun vpr-args-region-after-colon ()
   "Return the beginning and and of the region after ':' in the construction buffer at the current line."
   (save-excursion
     (beginning-of-line)
@@ -706,16 +706,16 @@
                 (cons s1 (point))))))
       nil)))
 
-(defun viperlanguage-args-remove-arg (arg)
+(defun vpr-args-remove-arg (arg)
   "Remove argument ARG from the argument list."
-  (setq-local viperlanguage-args-set (delete arg viperlanguage-args-set))
-  (setq-local viperlanguage-args-of-args (assoc-delete-all arg viperlanguage-args-of-args))
-  (let ((r (viperlanguage-args-region-after-colon)))
+  (setq-local vpr-args-set (delete arg vpr-args-set))
+  (setq-local vpr-args-of-args (assoc-delete-all arg vpr-args-of-args))
+  (let ((r (vpr-args-region-after-colon)))
     (when r
       (delete-region (car r) (cdr r))))
-  (viperlanguage-args-transfer))
+  (vpr-args-transfer))
 
-(defun viperlanguage-args-get-arg ()
+(defun vpr-args-get-arg ()
   "Return the argument text contained in a line of the args construction buffer."
   (save-excursion
     (beginning-of-line)
@@ -725,12 +725,12 @@
         (forward-char))
       (buffer-substring s (point)))))
 
-(defun viperlanguage-args-print-doc ()
+(defun vpr-args-print-doc ()
   "Print the documentation of the argument under point."
   (interactive)
-  (message "%s" (cdr (assoc (viperlanguage-args-get-arg) viperlanguage-args-doc 'equal))))
+  (message "%s" (cdr (assoc (vpr-args-get-arg) vpr-args-doc 'equal))))
 
-(defun viperlanguage-args-check-uncheck-arg (&optional append)
+(defun vpr-args-check-uncheck-arg (&optional append)
   "Toggle the appearance of the argument in the current line of the construction buffer in the argument list.  When APPEND is set to t, args of args are appended to the current arg."
   (interactive)
   (save-excursion
@@ -741,94 +741,94 @@
       (if (or (eq (char-after) ? ) append)
           (progn
             (let ((sofar "")
-                  (reg (viperlanguage-args-region-after-colon)))
+                  (reg (vpr-args-region-after-colon)))
               (delete-char 1)
-              (insert (propertize "X" 'face 'viperlanguage-verified-face))
+              (insert (propertize "X" 'face 'vpr-verified-face))
               (forward-char 2)
-              (let ((arg (viperlanguage-args-get-arg)))
-                (when (and append reg (member arg viperlanguage-args-that-need-many-args))
+              (let ((arg (vpr-args-get-arg)))
+                (when (and append reg (member arg vpr-args-that-need-many-args))
                   (setq sofar (buffer-substring (1+ (car reg)) (cdr reg))))
-                (viperlanguage-args-add-arg arg)
-                (when (assoc arg viperlanguage-args-that-need-args)
-                  (let ((arg-of-arg (concat (format "%s" (funcall (cdr (assoc arg viperlanguage-args-that-need-args)))) sofar)))
-                    (setq-local viperlanguage-args-of-args (cons (cons arg arg-of-arg) (assoc-delete-all arg viperlanguage-args-of-args)))
+                (vpr-args-add-arg arg)
+                (when (assoc arg vpr-args-that-need-args)
+                  (let ((arg-of-arg (concat (format "%s" (funcall (cdr (assoc arg vpr-args-that-need-args)))) sofar)))
+                    (setq-local vpr-args-of-args (cons (cons arg arg-of-arg) (assoc-delete-all arg vpr-args-of-args)))
                     (when reg
                       (delete-region (car reg) (cdr reg)))
                     (end-of-line)
-                    (insert (concat ": " (propertize (format "%s" arg-of-arg) 'face 'viperlanguage-argument-face)))))))
-            (viperlanguage-args-transfer))
+                    (insert (concat ": " (propertize (format "%s" arg-of-arg) 'face 'vpr-argument-face)))))))
+            (vpr-args-transfer))
         (delete-char 1)
         (insert-char ? )
-        (viperlanguage-args-remove-arg (viperlanguage-args-get-arg))))
+        (vpr-args-remove-arg (vpr-args-get-arg))))
     (setq-local buffer-read-only t)))
 
-(defun viperlanguage-args-add-arg-of-arg ()
+(defun vpr-args-add-arg-of-arg ()
   "Toggle on the argument in this line and if it already has arguments, add to the existing ones."
   (interactive)
-  (viperlanguage-args-check-uncheck-arg t))
+  (vpr-args-check-uncheck-arg t))
 
-(defun viperlanguage-args-quit ()
+(defun vpr-args-quit ()
   "Quit the arguments construction buffer."
   (interactive)
-  (let ((og viperlanguage-args-original-buffer))
+  (let ((og vpr-args-original-buffer))
     (kill-buffer)
     (pop-to-buffer og)))
 
-(defvar viperlanguage-args-mode-map nil "Keymap for viperlanguage-args.")
+(defvar vpr-args-mode-map nil "Keymap for vpr-args.")
 
-(when (not viperlanguage-args-mode-map)
-  (setq viperlanguage-args-mode-map (make-sparse-keymap))
-  (define-key viperlanguage-args-mode-map (kbd "n") 'next-line)
-  (define-key viperlanguage-args-mode-map (kbd "p") 'previous-line)
-  (define-key viperlanguage-args-mode-map (kbd "c") 'viperlanguage-args-check-uncheck-arg)
-  (define-key viperlanguage-args-mode-map (kbd "a") 'viperlanguage-args-add-arg-of-arg)
-  (define-key viperlanguage-args-mode-map (kbd "d") 'viperlanguage-args-print-doc)
-  (define-key viperlanguage-args-mode-map (kbd "q") 'viperlanguage-args-quit)
-  (define-key viperlanguage-args-mode-map (kbd "s") 'viperlanguage-args-save)
-  (define-key viperlanguage-args-mode-map (kbd "l") 'viperlanguage-args-load))
+(when (not vpr-args-mode-map)
+  (setq vpr-args-mode-map (make-sparse-keymap))
+  (define-key vpr-args-mode-map (kbd "n") 'next-line)
+  (define-key vpr-args-mode-map (kbd "p") 'previous-line)
+  (define-key vpr-args-mode-map (kbd "c") 'vpr-args-check-uncheck-arg)
+  (define-key vpr-args-mode-map (kbd "a") 'vpr-args-add-arg-of-arg)
+  (define-key vpr-args-mode-map (kbd "d") 'vpr-args-print-doc)
+  (define-key vpr-args-mode-map (kbd "q") 'vpr-args-quit)
+  (define-key vpr-args-mode-map (kbd "s") 'vpr-args-save)
+  (define-key vpr-args-mode-map (kbd "l") 'vpr-args-load))
 
-(define-derived-mode viperlanguage-args-mode fundamental-mode
-  "viperlanguage-args mode"
-  "Major mode for selecting arguments passed to viperlanguage in a construction buffer"
-  (use-local-map viperlanguage-args-mode-map)
+(define-derived-mode vpr-args-mode fundamental-mode
+  "vpr-args mode"
+  "Major mode for selecting arguments passed to vpr in a construction buffer"
+  (use-local-map vpr-args-mode-map)
   (read-only-mode t))
 
 ;;;###autoload
 
-(defvar viperlanguage-mode-map nil "Keymap for viperlanguage-mode.")
+(defvar vpr-mode-map nil "Keymap for vpr-mode.")
 
-(when (not viperlanguage-mode-map)
-  (setq viperlanguage-mode-map (make-sparse-keymap))
-  (define-key viperlanguage-mode-map (kbd "C-c C-c") 'viperlanguage-start-server)
-  (define-key viperlanguage-mode-map (kbd "C-c C-v") 'viperlanguage-verify)
-  (define-key viperlanguage-mode-map (kbd "C-c C-x") 'viperlanguage-stop-server)
-  (define-key viperlanguage-mode-map (kbd "C-c C-b") 'viperlanguage-change-backend)
-  (define-key viperlanguage-mode-map (kbd "C-c C-a") 'viperlanguage-edit-args)
-  (define-key viperlanguage-mode-map (kbd "}") 'viperlanguage-brace-and-indent))
+(when (not vpr-mode-map)
+  (setq vpr-mode-map (make-sparse-keymap))
+  (define-key vpr-mode-map (kbd "C-c C-c") 'vpr-start-server)
+  (define-key vpr-mode-map (kbd "C-c C-v") 'vpr-verify)
+  (define-key vpr-mode-map (kbd "C-c C-x") 'vpr-stop-server)
+  (define-key vpr-mode-map (kbd "C-c C-b") 'vpr-change-backend)
+  (define-key vpr-mode-map (kbd "C-c C-a") 'vpr-edit-args)
+  (define-key vpr-mode-map (kbd "}") 'vpr-brace-and-indent))
 
 
-(defvar viperlanguage-syntax-table
+(defvar vpr-syntax-table
   (let ((table (make-syntax-table)))
     (modify-syntax-entry ?/ ". 124b" table)
     (modify-syntax-entry ?* ". 23" table)
     (modify-syntax-entry ?\n "> b" table)
     table))
 
-(define-derived-mode viperlanguage-mode fundamental-mode
-  "viperlanguage mode"
+(define-derived-mode vpr-mode fundamental-mode
+  "vpr mode"
   "Major mode for editing Viper"
-  :syntax-table viperlanguage-syntax-table
-  (setq font-lock-defaults '((viperlanguage-font-lock-keywords)))
-  (setq-local indent-line-function #'viperlanguage-indent-line)
+  :syntax-table vpr-syntax-table
+  (setq font-lock-defaults '((vpr-font-lock-keywords)))
+  (setq-local indent-line-function #'vpr-indent-line)
   (setq comment-start "//")
   (setq comment-end "")
   (cursor-sensor-mode)
   (setq global-mode-string (or global-mode-string '("")))
-  (viperlanguage-args-initialize)
-  (unless (member '(:eval (viperlanguage-mode-line)) global-mode-string)
-    (setq global-mode-string (append global-mode-string '((:eval (viperlanguage-mode-line)))))))
+  (vpr-args-initialize)
+  (unless (member '(:eval (vpr-mode-line)) global-mode-string)
+    (setq global-mode-string (append global-mode-string '((:eval (vpr-mode-line)))))))
 
-(add-to-list 'auto-mode-alist '("\\.vpr" . viperlanguage-mode))
+(add-to-list 'auto-mode-alist '("\\.vpr" . vpr-mode))
 
-(provide 'viperlanguage-mode)
+(provide 'vpr-mode)
 ;;; viperlanguage-mode.el ends here
