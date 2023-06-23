@@ -1,38 +1,40 @@
-* viperlanguage-mode
+* Viper mode for Emacs
 [[https://www.pm.inf.ethz.ch/research/viper.html][Viper]] language support for Emacs.
 
-** Installation
+* Installation
 
 This package is under heavy development and does not support all Viper features. Thus, it is not published in any package archives.
-
-For the moment, the package uses viper through silicon with the default arguments.
 
 To install it, one must clone the repository:
 
 #+BEGIN_SRC shell
-  git clone git@github.com:Dspil/viperlanguage-mode.git
+  git clone git@github.com:viperproject/vpr-mode.git
 #+END_SRC
 
 Then, add the following lines in your init.el.
 
 #+BEGIN_SRC emacs-lisp
-  (add-to-list 'load-path "<viperlanguage-mode path>")
+  (add-to-list 'load-path "<vpr-mode path>")
 
-  (use-package viperlanguage-mode)
-
-  (setq viperlanguage-viper-path "<viper path>")
-  (setq viperlanguage-z3-path "<path to Z3>")
-  (setq viperlanguage-boogie-path "<path to Boogie>")
+  (use-package vpr-mode)
 #+END_SRC
+
+Last the following variables must be set
+
+#+begin_src emacs-lisp
+  (setq vpr-z3-path "<path/to/z3 exe>")
+  (setq vpr-viperserver-path "/path/to/viperserver.jar")
+  (setq vpr-boogie-path "<path/to/boogie exe>") ; required only for running viper with carbon
+#+end_src
 
 If you want the verification to happen on save:
 
 #+BEGIN_SRC emacs-lisp
-  (add-hook 'after-save-hook #'viperlanguage-verify)
+  (add-hook 'after-save-hook #'vpr-verify)
 #+END_SRC
 
-
-** Usage
+Note that the name of the mode is ~vpr-mode~ to not clash with the built-in [[https://www.emacswiki.org/emacs/ViperMode][viper-mode]].
+* Usage
 
 Current keybindings are:
 
@@ -40,3 +42,7 @@ Current keybindings are:
 - ~C-c C-v~: Verify this file
 - ~C-c C-x~: Stop Viper server
 - ~C-c C-b~: Alternate the backend between silicon and carbon
+- ~C-c C-a~: Edit the arguments given to Viper through a construction buffer
+
+* Who do I talk to?
+This project is maintained by [[https://github.com/Dspil][Dionisios Spiliopoulos]]
