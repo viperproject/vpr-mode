@@ -1,6 +1,12 @@
 * Viper mode for Emacs
 [[https://www.pm.inf.ethz.ch/research/viper.html][Viper]] language support for Emacs.
 
+* Dependencies
+
+- Z3 (tested with versions 4.8.7 and 4.12.1)
+- Boogie (for using [[https://github.com/viperproject/carbon][carbon]] as a backend)
+- [[https://github.com/viperproject/viperserver][ViperServer]]
+
 * Installation
 
 This package is under heavy development and does not support all Viper features. Thus, it is not published in any package archives.
