@@ -1,4 +1,4 @@
-;;; vpr-mode.el --- Syntax highlighting for Viper -*- lexical-binding: t -*-
+;;; vpr-mode.el --- Emacs IDE for Viper -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Dionisios Spiliopoulos
 
@@ -19,6 +19,11 @@
 
 ;;; Code:
 
+;; Requirements
+
+(require 'param-config)
+(require 'vpr-mode-params)
+
 ;; Variables
 
 (defvar-local vpr-highlight-overlays nil "Highglight overlays of errors reported by Viper.")
@@ -26,15 +31,11 @@
 (defvar-local vpr-has-errors nil "Is set to true when there are results with a verification status of failure.")
 (defvar-local vpr-has-exceptions nil "Is set to true when an exception is raised by the server.")
 (defvar vpr-viperserver-path nil "The location of Viperserver jar file.")
-(defvar vpr-z3-path nil "The location of Z3.")
-(defvar vpr-boogie-path nil "The location of Boogie.")
 (defvar vpr-server-port nil "Holds the port where the Viper server is listening.")
 (defvar vpr-default-tab-width 2 "Space-tab equivalence in a Viper program.")
 (defvar vpr-async-buffer nil "The buffer in which Viper server is running.")
 (defvar vpr-async-timer nil "Holds the timer of the function ran to identify the Viper server port.")
-(defvar-local vpr-backend "silicon" "The backend that should be used by Viper.")
-(defvar-local vpr-backend-options "--disableCaching --z3Exe=%s")
-(defvar-local vpr-carbon-options "--boogieExe=%s" "The carbon backend option that Viper should use.")
+(defvar-local vpr-viperserver-options "--disableCaching --z3Exe=%s")
 
 ;; helper functions
 
@@ -417,382 +418,6 @@
                 (concat b (propertize "Verifying..." 'face 'vpr-notran-face) "]")))))
       "")))
 
-;; ===============
-;; arguments stuff
-;; ===============
-
-(defvar-local vpr-args-original-buffer nil "Holds the name of the vpr file that corresponds to a vpr arguments construction buffer.")
-(defvar-local vpr-args-set nil "Holds the arguments of the viper backend.")
-(defvar-local vpr-args-of-args nil "Holds arguments of arguments of the viper backend.")
-(defvar-local vpr-args-doc nil "Holds arguments with their documentation depending on the backend.")
-(defvar-local vpr-args-that-need-args nil "Holds arguments that need arguments depending on the backend.")
-(defvar-local vpr-args-that-need-many-args nil "Holds arguments that need namy argumentds depending on the backend.")
-
-(defvar-local vpr-silicon-args-set nil "Holds the arguments of the silicon backend.")
-(defvar-local vpr-silicon-args-of-args nil "Holds arguments of arguments of the silicon backend.")
-
-(defvar-local vpr-carbon-args-set nil "Holds the arguments of the silicon backend.")
-(defvar-local vpr-carbon-args-of-args nil "Holds arguments of arguments of the silicon backend.")
-
-(defun vpr-args-initialize ()
-  "Initialize all variables having something to do with arguments."
-  (setq-local vpr-args-doc vpr-silicon-args-doc)
-  (setq-local vpr-args-that-need-args vpr-silicon-args-that-need-args)
-  (setq-local vpr-args-that-need-many-args vpr-silicon-args-that-need-many-args)
-  (setq-local vpr-carbon-args-set '("boogieExe"))
-  (setq-local vpr-carbon-args-of-args `(("boogieExe" . ,vpr-boogie-path))))
-;; getters
-
-(defun vpr-args-mode-getter (prompt modes)
-  "Get a mode from a list of MODES presenting a PROMPT."
-  (lambda ()
-    (completing-read prompt modes nil t)))
-
-(defun vpr-args-int-getter (prompt)
-  "Get an integer presenting a PROMPT."
-  (lambda () (read-number prompt)))
-
-(defun vpr-args-multi-string-getter (prompt1 prompt2)
-  "Get multiple strings.  Each string is taken with PROMPT1 and between strings PROMPT2 asks the user if he wants to continue."
-  (lambda ()
-    (let ((s (read-string prompt1)))
-      (while (y-or-n-p prompt2)
-        (setq s (concat s " " (read-string prompt1))))
-      s)))
-
-;; arguments for silicon
-
-(defvar vpr-silicon-args-doc
-  '(("alternativeFunctionVerificationOrder" . "Calculate the order in which functions are verified and function axioms become available in an alternative way that takes dependencies between functions through predicate unfoldings into account. This is more complete in some cases (see Silicon issue #355) but less complete in others (see test all/issues/silicon/unofficial007).")
-    ("assertionMode" . "Determines how assertion checks are encoded in SMTLIB. Options are 'pp' (push-pop) and 'cs' (soft constraints) (default: cs).")
-    ("assertTimeout" . "Timeout (in ms) per SMT solver assertion (default: 0, i.e. no timeout).")
-    ("assumeInjectivityOnInhale" . "Assumes injectivity of the receiver expression when inhaling quantified permissions, instead of checking it.")
-    ("checkTimeout" . "Timeout (in ms) per SMT solver check. Solver checks differ from solver asserts in that a failing assert always yields a verification error whereas a failing check doesn't, at least not directly. However, failing checks might result in performance degradation, e.g. when a dead program path is nevertheless explored, and indirectly in verification failures due to incompletenesses, e.g. when the held permission amount is too coarsely underapproximated (default: 10).")
-    ("conditionalizePermissions" . "Potentially reduces the number of symbolic execution paths, by conditionalising permission expressions. E.g. rewrite \"b ==> acc(x.f, p)\" to \"acc(x.f, b ? p : none)\".This is an experimental feature; report problems if you observe any.")
-    ("counterexample" . "Return counterexample for errors. Pass 'native' for returning the native model from the backend, 'variables' for returning a model of all local Viper variables, or 'mapped' (only available on Silicon) for returning a model with Ref variables resolved to object-like structures.")
-    ("disableCaches" . "Disables various caches in Silicon's state.")
-    ("disableCatchingExceptions" . "Don't catch exceptions (can be useful for debugging problems with Silicon)")
-    ("disableChunkOrderHeuristics" . "Disable heuristic ordering of quantified chunks (context: iterated separating conjunctions).")
-    ("disableHavocHack407" . "A Viper method call to ___silicon_hack407_havoc_all_R, where R is a field or predicate, results in Silicon havocking all instances of R. See also Silicon issue #407.")
-    ("disableISCTriggers" . "Don't pick triggers for quantifiers, let the SMT solver do it (context: iterated separating conjunctions).")
-    ("disableShortCircuitingEvaluations" . "Disable short-circuiting evaluation of AND, OR. If disabled, evaluating e.g., i > 0 && f(i), will fail if f's precondition requires i > 0.")
-    ("disableSubsumption" . "Don't add assumptions gained by verifying an assert statement")
-    ("disableTempDirectory" . "Disable the creation of temporary data (default: ./tmp)")
-    ("disableValueMapCaching" . "Disable caching of value maps (context: iterated separating conjunctions).")
-    ("enableBranchconditionReporting" . "Report branch conditions (can be useful for assertions that fail on multiple branches)")
-    ("enableMoreCompleteExhale" . "Enable a more complete exhale version.")
-    ("enablePredicateTriggersOnInhale" . "Emit predicate-based function trigger on each inhale of a predicate instance (context: heap-dependent functions).")
-    ("excludeMethods" . "Exclude methods from verification (default: ''). Is applied after the include pattern.")
-    ("handlePureConjunctsIndividually" . "Handle pure conjunction individually.Increases precision of error reporting, but may slow down verification.")
-    ("includeMethods" . "Include methods in verification (default: '*'). Wildcard characters are '?' and '*'.")
-    ("logConfig" . "Path to config file specifying SymbExLogger options")
-    ("logLevel" . "One of the log levels ALL, TRACE, DEBUG, INFO, WARN, ERROR, OFF")
-    ("mapAxiomatizationFile" . "Source file with map axiomatisation. If omitted, built-in one is used.")
-    ("maxHeuristicsDepth" . "Maximal number of nested heuristics applications (default: 3)")
-    ("multisetAxiomatizationFile" . "Source file with multiset axiomatisation. If omitted, built-in one is used.")
-    ("numberOfErrorsToReport" . "Number of errors per member before the verifier stops. If this number is set to 0, all errors are reported.")
-    ("numberOfParallelVerifiers" . "Number of verifiers run in parallel. This number plus one is the number of provers run in parallel (default: 12)")
-    ("plugin" . "Load plugin(s) with given class name(s). Several plugins can be separated by ':'. The fully qualified class name of the plugin should be specified.")
-    ("printMethodCFGs" . "Print a DOT (Graphviz) representation of the CFG of each method to verify to a file '<tempDirectory>/<methodName>.dot'.")
-    ("printTranslatedProgram" . "Print the final program that is going to be verified to stdout.")
-    ("qpSplitTimeout" . "Timeout (in ms) used by QP's split algorithm when 1) checking if a chunk holds no further permissions, and 2) checking if sufficiently many permissions have already been split off.")
-    ("recursivePredicateUnfoldings" . "Evaluate n unfolding expressions in the body of predicates that (transitively) unfold other instances of themselves (default: 1)")
-    ("sequenceAxiomatizationFile" . "Source file with sequence axiomatisation. If omitted, built-in one is used.")
-    ("setAxiomatizationFile" . "Source file with set axiomatisation. If omitted, built-in one is used.")
-    ("stateConsolidationMode" . "One of the following modes: 0: Minimal work, many incompletenesses 1: Most work, fewest incompletenesses 2: Similar to 1, but less eager 3: Less eager and less complete than 1 4: Intended for use with moreCompleteExhale")
-    ("tempDirectory" . "Path to which all temporary data will be written (default: ./tmp)")
-    ("timeout" . "Time out after approx. n seconds. The timeout is for the whole verification, not per method or proof obligation (default: 0, i.e. no timeout).")
-    ("z3Args" . "Command-line arguments which should be forwarded to Z3. The expected format is \"<opt> <opt> ... <opt>\", excluding the quotation marks.")
-    ("z3ConfigArgs" . "Configuration options which should be forwarded to Z3. The expected format is \"<key>=<val> <key>=<val> ... <key>=<val>\", excluding the quotation marks. The configuration options given here will override those from Silicon's Z3 preamble.")
-    ("z3EnableResourceBounds" . "Use Z3's resource bounds instead of timeouts")
-    ("z3Exe" . "Z3 executable. The environment variable Z3_EXE can also be used to specify the path of the executable.")
-    ("z3LogFile" . "Log file containing the interaction with Z3, extension smt2 will be appended. (default: <tempDirectory>/logfile.smt2)")
-    ("z3RandomizeSeeds" . "Set various Z3 random seeds to random values")
-    ("z3ResourcesPerMillisecond" . "Z3 resources per milliseconds. Is used to convert timeouts to resource bounds.")
-    ("z3SaturationTimeout" . "Timeout (in ms) used for Z3 state saturation calls (default: 100). A timeout of 0 disables all saturation checks.")
-    ("z3SaturationTimeoutWeights" . "Weights used to compute the effective timeout for Z3 state saturation calls, which are made at various points during a symbolic execution. The effective timeouts for a particular saturation call is computed by multiplying the corresponding weight with the base timeout for saturation calls. Defaults to the following weights: after program preamble: 1.0 after inhaling contracts: 0.5 after unfold: 0.4 after inhale: 0.2 before repeated Z3 queries: 0.02 Weights must be non-negative, a weight of 0 disables the corresponding saturation call and a minimal timeout of 10ms is enforced.")
-    ("help" . "Show help message"))
-  "Documentation for silicon arguments.")
-
-(defvar vpr-silicon-args-that-need-args
-  `(("assertionMode" . ,(vpr-args-mode-getter "Assertion mode: " '("cs" "pp")))
-    ("assertTimeout" . ,(vpr-args-int-getter "Assert timeout (in ms): "))
-    ("checkTimeout" . ,(vpr-args-int-getter "Z3 check timeout (in ms): "))
-    ("counterexample" . ,(vpr-args-mode-getter "Counterexample mode: " '("native" "variables" "mapped")))
-    ("excludeMethods" . (lambda () (read-string "Exclude methods: ")))
-    ("includeMethods" . (lambda () (read-string "Include methods: ")))
-    ("logConfig" . (lambda () (read-file-name "SymbExLogger config file: ")))
-    ("logLevel" . ,(vpr-args-mode-getter "Log level: " '("ALL" "TRACE" "DEBUG" "INFO" "WARN" "ERROR" "OFF")))
-    ("mapAxiomatizationFile" . (lambda () (read-file-name "Map axiomatization file: ")))
-    ("maxHeuristicsDepth" . ,(vpr-args-int-getter "Max heuristics depth: "))
-    ("multisetAxiomatizationFile" . (lambda () (read-file-name "Multiset axiomatization file: ")))
-    ("numberOfErrorsToReport" . ,(vpr-args-int-getter "Number of errors (0 for all): "))
-    ("numberOfParallelVerifiers" . ,(vpr-args-int-getter "Number of parallel verifiers: "))
-    ("plugin" . (lambda () (read-string "Plugins (multiple seperated with ':': ")))
-    ("qpSplitTimeout" . ,(vpr-args-int-getter "QP split timeout (in ms): "))
-    ("recursivePredicateUnfoldings" . ,(vpr-args-int-getter "Number of unfoldings: "))
-    ("sequenceAxiomatizationFile" . (lambda () (read-file-name "Sequence axiomatization file: ")))
-    ("setAxiomatizationFile" . (lambda () (read-file-name "Set axiomatization file: ")))
-    ("stateConsolidationMode" . ,(vpr-args-mode-getter "Assertion Mode: " '("0" "1" "2" "3" "4")))
-    ("tempDirectory" . (lambda () (read-directory-name "Temp directory: ")))
-    ("timeout" . ,(vpr-args-int-getter "Timeout (in s): "))
-    ("z3Args" . ,(vpr-args-multi-string-getter "Z3 argument: " "Enter more arguments? "))
-    ("z3ConfigArgs" . ,(vpr-args-multi-string-getter "Z3 config argument: " "Enter more arguments? "))
-    ("z3Exe" . (lambda () (read-file-name "Z3 executable: ")))
-    ("z3LogFile" . (lambda () (read-file-name "Z3 log file: ")))
-    ("z3ResourcesPerMillisecond" . (lambda () (read-string "Resources per milliseconds: ")))
-    ("z3SaturationTimeout" . ,(vpr-args-int-getter "Saturation timeout (in ms): "))
-    ("z3SaturationTimeoutWeights" . ,(vpr-args-multi-string-getter "Saturation timeout weight: " "Enter more weights? ")))
-  "Viper arguments that take arguments and functions to ask them from the user.")
-
-(defvar vpr-silicon-args-that-need-many-args
-  '("z3Args"
-    "z3ConfigArgs"
-    "z3SaturationTimeoutWeights")
-  "Viper arguments that take arguments and functions to ask them from the user.")
-
-;; arguments for carbon
-
-(defvar vpr-carbon-args-doc
-  '(("assumeInjectivityOnInhale" . "Assumes injectivity of the receiver expression when inhaling quantified permissions, instead of checking it.")
-    ("boogieExe" . "Manually-specified full path to Boogie.exe executable (default: ${BOOGIE_EXE})")
-    ("boogieOpt" . "Option(s) to pass-through as options to Boogie (changing the output generated by Boogie is not supported) (default: none)")
-    ("counterexample" . "Return counterexample for errors. Pass 'native' for returning the native model from the backend, 'variables' for returning a model of all local Viper variables, or 'mapped' (only available on Silicon) for returning a model with Ref variables resolved to object-like structures.")
-    ("disableAllocEncoding" . "Disable Allocation-related assumptions (default: enabled)")
-    ("plugin" . "Load plugin(s) with given class name(s). Several plugins can be separated by ':'. The fully qualified class name of the plugin should be specified.")
-    ("print" . "Write the Boogie output file to the provided filename (default: none)")
-    ("proverLog" . "Prover log file written by Boogie (default: none)")
-    ("z3Exe" . "Manually-specified full path to Z3.exe executable (default: ${Z3_EXE})")
-    ("help" . "Show help message"))
-  "Documentation for carbon arguments.")
-
-(defvar vpr-carbon-args-that-need-args
-  `(("boogieExe" . (lambda () (read-file-name "Boogie executable: ")))
-    ("boogieOpt" . (lambda () (read-string "Boogie options: ")))
-    ("counterexample" . ,(vpr-args-mode-getter "Counterexample mode: " '("native" "variables" "mapped")))
-    ("plugin" . (lambda () (read-string "Plugins (multiple seperated with ':': ")))
-    ("print" . (lambda () (read-file-name "Filename: ")))
-    ("proverLog" . (lambda () (read-file-name "Filename: ")))
-    ("z3Exe" . (lambda () (read-file-name "Z3 executable: "))))
-  "Viper arguments that take arguments and functions to ask them from the user.")
-
-(defvar vpr-carbon-args-that-need-many-args nil
-  "Viper arguments that take many arguments.")
-
-;; argument checking and unchecking logic
-
-(defun vpr-args-serialize ()
-  "Return the arguments string."
-  (let ((i vpr-args-set)
-        (s ""))
-    (while i
-      (let ((cur (car i))
-            (next (cdr i)))
-        (setq s (format "%s --%s" s cur))
-        (when (assoc cur vpr-args-that-need-args)
-          (setq s (format "%s %s" s (cdr (assoc cur vpr-args-of-args)))))
-        (setq i next)))
-    s))
-
-(defun vpr-dump (data filename)
-  "Dump DATA in the file FILENAME."
-  (with-temp-file filename
-    (prin1 data (current-buffer))))
-
-(defun vpr-load (filename)
-  "Restore data from the file FILENAME."
-  (with-temp-buffer
-    (insert-file-contents filename)
-    (cl-assert (bobp))
-    (read (current-buffer))))
-
-(defun vpr-args-save ()
-  "Save the current argument configuration to the disk."
-  (interactive)
-  (let ((f (read-file-name "File to save configuration: ")))
-    (with-current-buffer vpr-args-original-buffer
-      (vpr-dump (list vpr-backend (cons vpr-silicon-args-set vpr-silicon-args-of-args) (cons vpr-carbon-args-set vpr-carbon-args-of-args)) f))))
-
-(defun vpr-args-load ()
-  "Load an argument configuration from the disk."
-  (interactive)
-  (let* ((f (read-file-name "File name to load configuration: "))
-         (data (vpr-load f))
-         (backend (car data))
-         (silicon-args (nth 1 data))
-         (carbon-args (nth 2 data))
-         (silicon-args-set (car silicon-args))
-         (silicon-args-of-args (cdr silicon-args))
-         (carbon-args-set (car carbon-args))
-         (carbon-args-of-args (cdr carbon-args)))
-    (with-current-buffer vpr-args-original-buffer
-      (setq-local vpr-backend backend)
-      (setq-local vpr-silicon-args-set silicon-args-set)
-      (setq-local vpr-carbon-args-set carbon-args-set)
-      (setq-local vpr-silicon-args-of-args silicon-args-of-args)
-      (setq-local vpr-carbon-args-of-args carbon-args-of-args)
-      (if (equal vpr-backend "silicon")
-          (progn
-            (setq-local vpr-args-set vpr-silicon-args-set)
-            (setq-local vpr-args-of-args vpr-silicon-args-of-args)
-            (setq-local vpr-args-doc vpr-silicon-args-doc)
-            (setq-local vpr-args-that-need-args vpr-silicon-args-that-need-args)
-            (setq-local vpr-args-that-need-many-args vpr-silicon-args-that-need-many-args))
-        (setq-local vpr-args-set vpr-carbon-args-set)
-        (setq-local vpr-args-of-args vpr-carbon-args-of-args)
-        (setq-local vpr-args-doc vpr-carbon-args-doc)
-        (setq-local vpr-args-that-need-args vpr-carbon-args-that-need-args)
-        (setq-local vpr-args-that-need-many-args vpr-carbon-args-that-need-many-args))
-      (vpr-edit-args))))
-
-(defun vpr-populate-args-buffer ()
-  "Insert the prelude and arguments wit their values so far in the current buffer."
-  (setq-local buffer-read-only nil)
-  (erase-buffer)
-  (goto-char (point-min))
-  (insert "Vpr argument selection buffer.\nCheck any argument needed with 'c'.\nAdd arguments to an argument with 'a'\nPrint documentation of argument with 'd'.\nSave configuraton with 's'.\nLoad configuration with 'l'.\nPress 'q' to exit.\n\n")
-  (let ((start-pos (point)))
-    (let ((i vpr-args-doc))
-      (while i
-        (let ((cur (car i))
-              (next (cdr i)))
-          (insert-char ?\[)
-          (if (member (car cur) vpr-args-set)
-              (insert (propertize "X" 'face 'vpr-verified-face))
-            (insert-char ? ))
-          (insert "] ")
-          (insert (car cur))
-          (when (and (member (car cur) vpr-args-set) (assoc (car cur) vpr-args-that-need-args))
-            (insert (concat ": " (propertize (format "%s" (cdr (assoc (car cur) vpr-args-of-args))) 'face 'vpr-argument-face))))
-          (insert-char ?\n)
-          (setq i next))))
-    (setq-local buffer-read-only t)
-    (goto-char start-pos)))
-
-(defun vpr-args-transfer ()
-  "Transfer the change to the arguments at the main vpr buffer."
-  (let ((args vpr-args-set)
-        (args-of-args vpr-args-of-args))
-    (with-current-buffer vpr-args-original-buffer
-      (setq-local vpr-args-set args)
-      (setq-local vpr-args-of-args args-of-args)
-      (if (equal vpr-backend "carbon")
-          (progn
-            (setq-local vpr-carbon-args-set vpr-args-set)
-            (setq-local vpr-carbon-args-of-args vpr-args-of-args))
-        (setq-local vpr-silicon-args-set vpr-args-set)
-        (setq-local vpr-silicon-args-of-args vpr-args-of-args)))))
-
-(defun vpr-args-add-arg (arg)
-  "Add argument ARG to the argument list."
-  (when (not (member arg vpr-args-set))
-    (setq-local vpr-args-set (cons arg vpr-args-set))
-    (vpr-args-transfer)))
-
-(defun vpr-args-region-after-colon ()
-  "Return the beginning and and of the region after ':' in the construction buffer at the current line."
-  (save-excursion
-    (beginning-of-line)
-    (if (equal (char-after) ?\[)
-        (progn
-          (forward-char 4)
-          (let ((s (point)))
-            (while (and (not (equal (char-after) ?\n)) (not (equal (char-after) ?:)) (not (eobp)))
-              (forward-char))
-            (when (equal (char-after) ?:)
-              (let ((s1 (point)))
-                (while (and (not (equal (char-after) ?\n)) (not (eobp)))
-                  (forward-char))
-                (cons s1 (point))))))
-      nil)))
-
-(defun vpr-args-remove-arg (arg)
-  "Remove argument ARG from the argument list."
-  (setq-local vpr-args-set (delete arg vpr-args-set))
-  (setq-local vpr-args-of-args (assoc-delete-all arg vpr-args-of-args))
-  (let ((r (vpr-args-region-after-colon)))
-    (when r
-      (delete-region (car r) (cdr r))))
-  (vpr-args-transfer))
-
-(defun vpr-args-get-arg ()
-  "Return the argument text contained in a line of the args construction buffer."
-  (save-excursion
-    (beginning-of-line)
-    (forward-char 4)
-    (let ((s (point)))
-      (while (and (not (equal (char-after) ?\n)) (not (equal (char-after) ?:)) (not (eobp)))
-        (forward-char))
-      (buffer-substring s (point)))))
-
-(defun vpr-args-print-doc ()
-  "Print the documentation of the argument under point."
-  (interactive)
-  (message "%s" (cdr (assoc (vpr-args-get-arg) vpr-args-doc 'equal))))
-
-(defun vpr-args-check-uncheck-arg (&optional append)
-  "Toggle the appearance of the argument in the current line of the construction buffer in the argument list.  When APPEND is set to t, args of args are appended to the current arg."
-  (interactive)
-  (save-excursion
-    (beginning-of-line)
-    (when (equal (char-after) ?\[)
-      (forward-char)
-      (setq-local buffer-read-only nil)
-      (if (or (eq (char-after) ? ) append)
-          (progn
-            (let ((sofar "")
-                  (reg (vpr-args-region-after-colon)))
-              (delete-char 1)
-              (insert (propertize "X" 'face 'vpr-verified-face))
-              (forward-char 2)
-              (let ((arg (vpr-args-get-arg)))
-                (when (and append reg (member arg vpr-args-that-need-many-args))
-                  (setq sofar (buffer-substring (1+ (car reg)) (cdr reg))))
-                (vpr-args-add-arg arg)
-                (when (assoc arg vpr-args-that-need-args)
-                  (let ((arg-of-arg (concat (format "%s" (funcall (cdr (assoc arg vpr-args-that-need-args)))) sofar)))
-                    (setq-local vpr-args-of-args (cons (cons arg arg-of-arg) (assoc-delete-all arg vpr-args-of-args)))
-                    (when reg
-                      (delete-region (car reg) (cdr reg)))
-                    (end-of-line)
-                    (insert (concat ": " (propertize (format "%s" arg-of-arg) 'face 'vpr-argument-face)))))))
-            (vpr-args-transfer))
-        (delete-char 1)
-        (insert-char ? )
-        (vpr-args-remove-arg (vpr-args-get-arg))))
-    (setq-local buffer-read-only t)))
-
-(defun vpr-args-add-arg-of-arg ()
-  "Toggle on the argument in this line and if it already has arguments, add to the existing ones."
-  (interactive)
-  (vpr-args-check-uncheck-arg t))
-
-(defun vpr-args-quit ()
-  "Quit the arguments construction buffer."
-  (interactive)
-  (let ((og vpr-args-original-buffer))
-    (kill-buffer)
-    (pop-to-buffer og)))
-
-(defvar vpr-args-mode-map nil "Keymap for vpr-args.")
-
-(when (not vpr-args-mode-map)
-  (setq vpr-args-mode-map (make-sparse-keymap))
-  (define-key vpr-args-mode-map (kbd "n") 'next-line)
-  (define-key vpr-args-mode-map (kbd "p") 'previous-line)
-  (define-key vpr-args-mode-map (kbd "c") 'vpr-args-check-uncheck-arg)
-  (define-key vpr-args-mode-map (kbd "a") 'vpr-args-add-arg-of-arg)
-  (define-key vpr-args-mode-map (kbd "d") 'vpr-args-print-doc)
-  (define-key vpr-args-mode-map (kbd "q") 'vpr-args-quit)
-  (define-key vpr-args-mode-map (kbd "s") 'vpr-args-save)
-  (define-key vpr-args-mode-map (kbd "l") 'vpr-args-load))
-
-(define-derived-mode vpr-args-mode fundamental-mode
-  "vpr-args mode"
-  "Major mode for selecting arguments passed to vpr in a construction buffer"
-  (use-local-map vpr-args-mode-map)
-  (read-only-mode t))
-
 ;;;###autoload
 
 (defvar vpr-mode-map nil "Keymap for vpr-mode.")
@@ -828,7 +453,7 @@
   (unless (member '(:eval (vpr-mode-line)) global-mode-string)
     (setq global-mode-string (append global-mode-string '((:eval (vpr-mode-line)))))))
 
-(add-to-list 'auto-mode-alist '("\\.vpr" . vpr-mode))
+(add-to-list 'auto-mode-alist '("\\.vpr$" . vpr-mode))
 
 (provide 'vpr-mode)
 ;;; vpr-mode.el ends here
