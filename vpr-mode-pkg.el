@@ -1,3 +1,3 @@
 (define-package "vpr-mode" "0.1"
-  "A Git porcelain inside Emacs."
+  "Viper Emacs IDE."
   '((emacs         "27.1")))

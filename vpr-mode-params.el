@@ -31,15 +31,9 @@
 (defvar vpr-boogie-path nil "The location of Boogie.")
 
 (defvar-local vpr-mode-silicon-config '())
-(defvar-local vpr-mode-carbon-config `(("boogieExe" . (list vpr-boogie-path))))
+(defvar-local vpr-mode-carbon-config `(("boogieExe" ,(list vpr-boogie-path))))
 
 (defvar-local vpr-mode-silicon-z3-args '())
-
-
-(defun vpr-args-initialize ()
-  "Initialize all variables having something to do with arguments."
-  (setq-local vpr-carbon-args-set '("boogieExe"))
-  (setq-local vpr-carbon-args-of-args ))
 
 ;; getters
 
@@ -70,12 +64,12 @@
       :name "assertionMode"
       :doc "Determines how assertion checks are encoded in SMTLIB. Options are 'pp' (push-pop) and 'cs' (soft constraints) (default: cs)."
       :args t
-      :getter ,(vpr-args-mode-getter "Assertion mode: " '("cs" "pp")))
+      :getter (vpr-args-mode-getter "Assertion mode: " '("cs" "pp")))
     ,(make-param-config-param
       :name "assertTimeout"
       :doc "Timeout (in ms) per SMT solver assertion (default: 0, i.e. no timeout)."
       :args t
-      :getter ,(vpr-args-int-getter "Assert timeout (in ms): "))
+      :getter (vpr-args-int-getter "Assert timeout (in ms): "))
     ,(make-param-config-param
       :name "assumeInjectivityOnInhale"
       :doc "Assumes injectivity of the receiver expression when inhaling quantified permissions, instead of checking it.")
@@ -83,7 +77,7 @@
       :name "checkTimeout"
       :doc "Timeout (in ms) per SMT solver check. Solver checks differ from solver asserts in that a failing assert always yields a verification error whereas a failing check doesn't, at least not directly. However, failing checks might result in performance degradation, e.g. when a dead program path is nevertheless explored, and indirectly in verification failures due to incompletenesses, e.g. when the held permission amount is too coarsely underapproximated (default: 10)."
       :args t
-      :getter ,(vpr-args-int-getter "Z3 check timeout (in ms): "))
+      :getter (vpr-args-int-getter "Z3 check timeout (in ms): "))
     ,(make-param-config-param
       :name "conditionalizePermissions"
       :doc "Potentially reduces the number of symbolic execution paths, by conditionalising permission expressions. E.g. rewrite \"b ==> acc(x.f, p)\" to \"acc(x.f, b ? p : none)\".This is an experimental feature; report problems if you observe any.")
@@ -91,7 +85,7 @@
       :name "counterexample"
       :doc "Return counterexample for errors. Pass 'native' for returning the native model from the backend, 'variables' for returning a model of all local Viper variables, or 'mapped' (only available on Silicon) for returning a model with Ref variables resolved to object-like structures."
       :args t
-      :getter ,(vpr-args-mode-getter "Counterexample mode: " '("native" "variables" "mapped")))
+      :getter (vpr-args-mode-getter "Counterexample mode: " '("native" "variables" "mapped")))
     ,(make-param-config-param
       :name "disableCaches"
       :doc "Disables various caches in Silicon's state.")
@@ -136,7 +130,8 @@
     ,(make-param-config-param
       :name "exhaleMode"
       :doc "Exhale mode. Options are 0 (greedy, default), 1 (more complete exhale), 2 (more complete exhale on demand)."
-      :args ,(vpr-args-mode-getter "Exhale mode" '("0" "1" "2")))
+      :args t
+      :getter (vpr-args-mode-getter "Exhale mode" '("0" "1" "2")))
     ,(make-param-config-param
       :name "handlePureConjunctsIndividually"
       :doc "Handle pure conjunction individually.Increases precision of error reporting, but may slow down verification.")
@@ -154,7 +149,7 @@
       :name "logLevel"
       :doc "One of the log levels ALL, TRACE, DEBUG, INFO, WARN, ERROR, OFF"
       :args t
-      :getter ,(vpr-args-mode-getter "Log level: " '("ALL" "TRACE" "DEBUG" "INFO" "WARN" "ERROR" "OFF")))
+      :getter (vpr-args-mode-getter "Log level: " '("ALL" "TRACE" "DEBUG" "INFO" "WARN" "ERROR" "OFF")))
     ,(make-param-config-param
       :name "mapAxiomatizationFile"
       :doc "Source file with map axiomatisation. If omitted, built-in one is used."
@@ -164,7 +159,7 @@
       :name "maxHeuristicsDepth"
       :doc "Maximal number of nested heuristics applications (default: 3)"
       :args t
-      :getter ,(vpr-args-int-getter "Max heuristics depth: "))
+      :getter (vpr-args-int-getter "Max heuristics depth: "))
     ,(make-param-config-param
       :name "multisetAxiomatizationFile"
       :doc "Source file with multiset axiomatisation. If omitted, built-in one is used."
@@ -174,17 +169,18 @@
       :name "numberOfErrorsToReport"
       :doc "Number of errors per member before the verifier stops. If this number is set to 0, all errors are reported."
       :args t
-      :getter ,(vpr-args-int-getter "Number of errors (0 for all): "))
+      :getter (vpr-args-int-getter "Number of errors (0 for all): "))
     ,(make-param-config-param
       :name "numberOfParallelVerifiers"
       :doc "Number of verifiers run in parallel. This number plus one is the number of provers run in parallel (default: 12)"
       :args t
-      :getter ,(vpr-args-int-getter "Number of parallel verifiers: "))
+      :getter (vpr-args-int-getter "Number of parallel verifiers: "))
     ,(make-param-config-param
       :name "plugin"
       :doc "Load plugin(s) with given class name(s). Several plugins can be separated by ':'. The fully qualified class name of the plugin should be specified."
       :args t
-      :getter (lambda () (read-string "Plugins (multiple seperated with ':': ")))
+      :getter (lambda () (read-string "Plugin: "))
+      :repeating t)
     ,(make-param-config-param
       :name "printMethodCFGs"
       :doc "Print a DOT (Graphviz) representation of the CFG of each method to verify to a file '<tempDirectory>/<methodName>.dot'.")
@@ -195,12 +191,12 @@
       :name "qpSplitTimeout"
       :doc "Timeout (in ms) used by QP's split algorithm when 1) checking if a chunk holds no further permissions, and 2) checking if sufficiently many permissions have already been split off."
       :args t
-      :getter ,(vpr-args-int-getter "QP split timeout (in ms): "))
+      :getter (vpr-args-int-getter "QP split timeout (in ms): "))
     ,(make-param-config-param
       :name "recursivePredicateUnfoldings"
       :doc "Evaluate n unfolding expressions in the body of predicates that (transitively) unfold other instances of themselves (default: 1)"
       :args t
-      :getter ,(vpr-args-int-getter "Number of unfoldings: "))
+      :getter (vpr-args-int-getter "Number of unfoldings: "))
     ,(make-param-config-param
       :name "sequenceAxiomatizationFile"
       :doc "Source file with sequence axiomatisation. If omitted, built-in one is used."
@@ -215,7 +211,7 @@
       :name "stateConsolidationMode"
       :doc "One of the following modes: 0: Minimal work, many incompletenesses 1: Most work, fewest incompletenesses 2: Similar to 1, but less eager 3: Less eager and less complete than 1 4: Intended for use with moreCompleteExhale"
       :args t
-      :getter ,(vpr-args-mode-getter "Assertion Mode: " '("0" "1" "2" "3" "4")))
+      :getter (vpr-args-mode-getter "Assertion Mode: " '("0" "1" "2" "3" "4")))
     ,(make-param-config-param
       :name "tempDirectory"
       :doc "Path to which all temporary data will be written (default: ./tmp)"
@@ -225,7 +221,7 @@
       :name "timeout"
       :doc "Time out after approx. n seconds. The timeout is for the whole verification, not per method or proof obligation (default: 0, i.e. no timeout)."
       :args t
-      :getter ,(vpr-args-int-getter "Timeout (in s): "))
+      :getter (vpr-args-int-getter "Timeout (in s): "))
     ,(make-param-config-param
       :name "z3Args"
       :doc "Command-line arguments which should be forwarded to Z3. The expected format is \"<opt> <opt> ... <opt>\", excluding the quotation marks."
@@ -241,7 +237,8 @@
       :name "z3ConfigArgs"
       :doc "Configuration options which should be forwarded to Z3. The expected format is \"<key>=<val> <key>=<val> ... <key>=<val>\", excluding the quotation marks. The configuration options given here will override those from Silicon's Z3 preamble."
       :args t
-      :getter ,(vpr-args-multi-string-getter "Z3 config argument: " "Enter more arguments? ")
+      :getter (lambda ()
+                (read-string "Z3 config argument: "))
       :repeating t)
     ,(make-param-config-param
       :name "z3EnableResourceBounds"
@@ -268,12 +265,12 @@
       :name "z3SaturationTimeout"
       :doc "Timeout (in ms) used for Z3 state saturation calls (default: 100). A timeout of 0 disables all saturation checks."
       :args t
-      :getter ,(vpr-args-int-getter "Saturation timeout (in ms): "))
+      :getter (vpr-args-int-getter "Saturation timeout (in ms): "))
     ,(make-param-config-param
       :name "z3SaturationTimeoutWeights"
       :doc "Weights used to compute the effective timeout for Z3 state saturation calls, which are made at various points during a symbolic execution. The effective timeouts for a particular saturation call is computed by multiplying the corresponding weight with the base timeout for saturation calls. Defaults to the following weights: after program preamble: 1.0 after inhaling contracts: 0.5 after unfold: 0.4 after inhale: 0.2 before repeated Z3 queries: 0.02 Weights must be non-negative, a weight of 0 disables the corresponding saturation call and a minimal timeout of 10ms is enforced."
       :args t
-      :getter ,(vpr-args-multi-string-getter "Saturation timeout weight: " "Enter more weights? ")
+      :getter (vpr-args-int-getter "Saturation timeout (in ms): ")
       :repeating t)
     ,(make-param-config-param
       :name "help"
@@ -299,7 +296,7 @@
       :name "counterexample"
       :doc "Return counterexample for errors. Pass 'native' for returning the native model from the backend, 'variables' for returning a model of all local Viper variables, or 'mapped' (only available on Silicon) for returning a model with Ref variables resolved to object-like structures."
       :args t
-      :getter ,(vpr-args-mode-getter "Counterexample mode: " '("native" "variables" "mapped")))
+      :getter (vpr-args-mode-getter "Counterexample mode: " '("native" "variables" "mapped")))
     ,(make-param-config-param
       :name "disableAllocEncoding"
       :doc "Disable Allocation-related assumptions (default: enabled)")
@@ -307,7 +304,8 @@
       :name "plugin"
       :doc "Load plugin(s) with given class name(s). Several plugins can be separated by ':'. The fully qualified class name of the plugin should be specified."
       :args t
-      :getter (lambda () (read-string "Plugins (multiple seperated with ':': ")))
+      :getter (lambda () (read-string "Plugin: "))
+      :repeating t)
     ,(make-param-config-param
       :name "print"
       :doc "Write the Boogie output file to the provided filename (default: none)"
@@ -327,3 +325,6 @@
       :name "help"
       :doc "Show help message")))
 
+
+(provide 'vpr-mode-params)
+;;; vpr-mode-params.el ends here

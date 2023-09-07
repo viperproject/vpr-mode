@@ -183,49 +183,9 @@
 
 ;;; configure
 
-(defun vpr-change-backend ()
-  "Alternate the backend from carbon to silicon and vice versa."
-  (interactive)
-  (if (equal vpr-backend "carbon")
-      (progn
-        (setq-local vpr-backend "silicon")
-        (setq-local vpr-carbon-args-set vpr-args-set)
-        (setq-local vpr-carbon-args-of-args vpr-args-of-args)
-        (setq-local vpr-args-set vpr-silicon-args-set)
-        (setq-local vpr-args-of-args vpr-silicon-args-of-args)
-        (setq-local vpr-args-doc vpr-silicon-args-doc)
-        (setq-local vpr-args-that-need-args vpr-silicon-args-that-need-args)
-        (setq-local vpr-args-that-need-many-args vpr-silicon-args-that-need-many-args))
-    (setq-local vpr-backend "carbon")
-    (setq-local vpr-silicon-args-set vpr-args-set)
-    (setq-local vpr-silicon-args-of-args vpr-args-of-args)
-    (setq-local vpr-args-set vpr-carbon-args-set)
-    (setq-local vpr-args-of-args vpr-carbon-args-of-args)
-    (setq-local vpr-args-doc vpr-carbon-args-doc)
-    (setq-local vpr-args-that-need-args vpr-carbon-args-that-need-args)
-    (setq-local vpr-args-that-need-many-args vpr-carbon-args-that-need-many-args))
-  (force-mode-line-update))
-
 (defun vpr-edit-args ()
   "Spawn the construction buffer for the arguments."
-  (interactive)
-  (let ((cur-buf (buffer-name))
-        (arg-buf (format "%s%s" (current-buffer) "~args"))
-        (arg-set vpr-args-set)
-        (args-of-args vpr-args-of-args)
-        (args-doc vpr-args-doc)
-        (args-that-need-args vpr-args-that-need-args)
-        (args-that-need-many-args vpr-args-that-need-many-args))
-    (with-current-buffer (get-buffer-create arg-buf)
-      (vpr-args-mode)
-      (setq-local vpr-args-original-buffer cur-buf)
-      (setq-local vpr-args-set arg-set)
-      (setq-local vpr-args-of-args args-of-args)
-      (setq-local vpr-args-doc args-doc)
-      (setq-local vpr-args-that-need-args args-that-need-args)
-      (setq-local vpr-args-that-need-many-args args-that-need-many-args)
-      (vpr-populate-args-buffer))
-    (pop-to-buffer arg-buf)))
+  (interactive))
 
 ;;; make requests to server
 
