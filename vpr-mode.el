@@ -32,9 +32,27 @@
 (defvar vpr-default-tab-width 2 "Space-tab equivalence in a Viper program.")
 (defvar vpr-async-buffer nil "The buffer in which Viper server is running.")
 (defvar vpr-async-timer nil "Holds the timer of the function ran to identify the Viper server port.")
+(defvar vpr-pretty-symbols
+  '(("<=" . 8804)
+    (">=" . 8805)
+    ("!=" . 8800)
+    (":=" . 8788)
+    ("&&" . 10033)
+    ("||" . 8744)
+    ("=>" . 8658)
+    ("<==>" . 10234)
+    ("==>" . 10233)
+    ("<==" . 10232)
+    ("exists" . 8707)
+    ("forall" . 8704)
+    ("::" . 8729)
+    ("in" . 8712))
+  "Symbols that vpr-mode will automatically prettify")
 (defvar-local vpr-backend "silicon" "The backend that should be used by Viper.")
 (defvar-local vpr-backend-options "--disableCaching --z3Exe=%s")
 (defvar-local vpr-carbon-options "--boogieExe=%s" "The carbon backend option that Viper should use.")
+
+
 
 ;; helper functions
 
@@ -820,6 +838,8 @@
   :syntax-table vpr-syntax-table
   (setq font-lock-defaults '((vpr-font-lock-keywords)))
   (setq-local indent-line-function #'vpr-indent-line)
+  (setq-local prettify-symbols-alist vpr-pretty-symbols)
+  (prettify-symbols-mode)
   (setq comment-start "//")
   (setq comment-end "")
   (cursor-sensor-mode)
