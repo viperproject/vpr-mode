@@ -37,14 +37,13 @@
     (">=" . 8805)
     ("!=" . 8800)
     (":=" . 8788)
-    ("&&" . 10033)
+    ("&&" . 10043)
     ("||" . 8744)
     ("=>" . 8658)
     ("<==>" . 10234)
     ("==>" . 10233)
     ("<==" . 10232)
     ("exists" . 8707)
-    ("forall" . 8704)
     ("::" . 8729)
     ("in" . 8712))
   "Symbols that vpr-mode will automatically prettify")
@@ -105,7 +104,7 @@
 (setq vpr-keywords '("domain" "axiom" "method" "while" "label" "goto" "var" "import" "function" "predicate" "field" "if" "else" "returns"))
 (setq vpr-types '("Ref" "Bool" "Int" "Rational" "Perm" "Seq" "Set" "Multiset"))
 (setq vpr-constants '("true" "false"))
-(setq vpr-events '("exists" "forall" "invariant" "apply" "requires" "ensures" "fold" "unfold" "inhale" "assume" "exhale" "assert" "unfolding" "in" "forperm" "package" "decreases"))
+(setq vpr-events '("exists" "invariant" "apply" "requires" "ensures" "fold" "unfold" "inhale" "assume" "exhale" "assert" "unfolding" "in" "forperm" "package" "decreases"))
 (setq vpr-functions '())
 
 ;; generate regex string for each category of keywords
@@ -123,7 +122,14 @@
         (,vpr-constant-regexp . font-lock-constant-face)
         (,vpr-event-regexp . font-lock-builtin-face)
         (,vpr-functions-regexp . font-lock-function-name-face)
-        (,vpr-keywords-regexp . font-lock-keyword-face)))
+        (,vpr-keywords-regexp . font-lock-keyword-face)
+        ("\\(\\_<forall\\_>\\).*?::"
+         (1 (compose-region (match-beginning 1) (match-end 1) ?∀))
+         (1 font-builtin-face append))
+        ("\\(-\\)\\(-\\)\\(*\\)"
+         (1 (compose-region (match-beginning 1) (match-end 1) ?‒))
+         (1 (compose-region (match-beginning 2) (match-end 2) ?‒))
+         (1 (compose-region (match-beginning 3) (match-end 3) ?✻)))))
 
 ;; clear memory. no longer needed
 (setq vpr-keywords nil)
