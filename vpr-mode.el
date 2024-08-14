@@ -100,103 +100,109 @@
   '((t (:foreground "Grey")))
   "The face used to distinguish args from args of args in the arguments construction buffer.")
 
-;; define several category of keywords
-(setq vpr-keywords '("domain" "axiom" "method" "while" "label" "goto" "var" "import" "function" "predicate" "field" "if" "else" "returns"))
-(setq vpr-types '("Ref" "Bool" "Int" "Rational" "Perm" "Seq" "Set" "Multiset"))
-(setq vpr-constants '("true" "false"))
-(setq vpr-events '("exists" "invariant" "apply" "requires" "ensures" "fold" "unfold" "inhale" "assume" "exhale" "assert" "unfolding" "in" "forperm" "package" "decreases"))
-(setq vpr-functions '())
+;; ========
+;; Keywords
+;; ========
 
-;; generate regex string for each category of keywords
-(setq vpr-keywords-regexp (regexp-opt vpr-keywords 'words))
-(setq vpr-type-regexp (regexp-opt vpr-types 'words))
-(setq vpr-constant-regexp (regexp-opt vpr-constants 'words))
-(setq vpr-event-regexp (regexp-opt vpr-events 'words))
-(setq vpr-functions-regexp (regexp-opt vpr-functions 'words))
+(defun vpr-build-keywords ()
+  ;; define several category of keywords
+  (let* ((vpr-keywords '("domain"
+                         "axiom"
+                         "method"
+                         "while"
+                         "label"
+                         "goto"
+                         "var"
+                         "import"
+                         "function"
+                         "predicate"
+                         "field"
+                         "if"
+                         "else"
+                         "returns"))
+         (vpr-types '("Ref"
+                      "Bool"
+                      "Int"
+                      "Rational"
+                      "Perm"
+                      "Seq"
+                      "Set"
+                      "Multiset"))
+         (vpr-constants '("true"
+                          "false"))
+         (vpr-events '("exists"
+                       "invariant"
+                       "apply"
+                       "requires"
+                       "ensures"
+                       "fold"
+                       "unfold"
+                       "inhale"
+                       "assume"
+                       "exhale"
+                       "assert"
+                       "unfolding"
+                       "in"
+                       "forperm"
+                       "package"
+                       "decreases"))
+         (vpr-functions '())
+         
+         (vpr-keywords-regexp (regexp-opt vpr-keywords 'words))
+         (vpr-type-regexp (regexp-opt vpr-types 'words))
+         (vpr-constant-regexp (regexp-opt vpr-constants 'words))
+         (vpr-event-regexp (regexp-opt vpr-events 'words))
+         (vpr-functions-regexp (regexp-opt vpr-functions 'words)))
+    `((,vpr-type-regexp . font-lock-type-face)
+      (,vpr-constant-regexp . font-lock-constant-face)
+      (,vpr-event-regexp . font-lock-builtin-face)
+      (,vpr-functions-regexp . font-lock-function-name-face)
+      (,vpr-keywords-regexp . font-lock-keyword-face)
+      ("\\(\\_<forall\\_>\\).*?::"
+       (1 (compose-region (match-beginning 1) (match-end 1) ?∀))
+       (1 font-builtin-face append))
+      ("\\(-\\)\\(-\\)\\(*\\)"
+       (1 (compose-region (match-beginning 1) (match-end 1) ?‒))
+       (1 (compose-region (match-beginning 2) (match-end 2) ?‒))
+       (1 (compose-region (match-beginning 3) (match-end 3) ?✻))))))
 
-;; create the list for font-lock.
-;; each category of keyword is given a particular face
-(setq vpr-font-lock-keywords
-      `(
-        (,vpr-type-regexp . font-lock-type-face)
-        (,vpr-constant-regexp . font-lock-constant-face)
-        (,vpr-event-regexp . font-lock-builtin-face)
-        (,vpr-functions-regexp . font-lock-function-name-face)
-        (,vpr-keywords-regexp . font-lock-keyword-face)
-        ("\\(\\_<forall\\_>\\).*?::"
-         (1 (compose-region (match-beginning 1) (match-end 1) ?∀))
-         (1 font-builtin-face append))
-        ("\\(-\\)\\(-\\)\\(*\\)"
-         (1 (compose-region (match-beginning 1) (match-end 1) ?‒))
-         (1 (compose-region (match-beginning 2) (match-end 2) ?‒))
-         (1 (compose-region (match-beginning 3) (match-end 3) ?✻)))))
 
-;; clear memory. no longer needed
-(setq vpr-keywords nil)
-(setq vpr-types nil)
-(setq vpr-constants nil)
-(setq vpr-events nil)
-(setq vpr-functions nil)
-
-;; clear memory. no longer needed
-(setq vpr-keywords-regexp nil)
-(setq vpr-types-regexp nil)
-(setq vpr-constants-regexp nil)
-(setq vpr-events-regexp nil)
-(setq vpr-functions-regexp nil)
-
-
+;; ===========
 ;; indentation
-(defun vpr-count-braces ()
-  "Return a number that corresponds to how many more curly braces or parentheses have been opened than closed in the current line."
-  (let ((s (thing-at-point 'line t))
-	      (i 0)
-	      (res 0))
-    (while (< i (length s))
-      (when (or (eq (aref s i) ?}) (eq (aref s i) ?\)))
-	      (setq res (1- res)))
-      (when (or (eq (aref s i) ?{) (eq (aref s i) ?\())
-	      (setq res (1+ res)))
-      (setq i (1+ i)))
-    res))
+;; ===========
 
-(defun vpr-only-braces ()
-  "Check if the current line has only closing braces or parentheses."
+(defun vpr-only-closing-braces (cur-l)
+  "Check if the current line has only closing braces or parentheses. Return 1 if yes, 0 if no."
+  (if (string-match-p "^[\t })]+$" cur-l)
+      1
+    0))
+
+(defun vpr-part-of-spec (cur-l)
+  "Return 1 if we are in a spec or an invariant, otherwise 0."
   (save-excursion
-    (beginning-of-line)
-    (looking-at-p "^[\t })]+$")))
+    (let ((begp (forward-line -1)))
+      (if (equal begp -1)
+          0
+        (let ((l (thing-at-point 'line t)))
+          (if (and (or (string-match-p "^method [^{]*$" l)
+                       (string-match-p "^function [^{]*$" l)
+                       (string-match-p "^[\t ]+\\<\\(while\\|invariant\\|requires\\|ensures\\)\\>[^{]*$" l))
+                   (not (string-match-p "^[\t ]*{.*" cur-l)))
+              1
+            0))))))
 
 (defun vpr-indent-line ()
   "Indent current line as Viper code."
   (interactive)
   (save-excursion
-    (let ((curindent 0)
-	        (beg t))
-      (save-excursion
-	      (beginning-of-line)
-	      (if (bobp)
-	          (indent-line-to 0)
-	        (setq curindent (vpr-count-braces))
-	        (while beg
-	          (forward-line -1)
-	          (setq curindent (+ curindent (vpr-count-braces)))
-	          (setq beg (or (and (not (bobp)) ( looking-at "[ \t]*\n")) (and (not (bobp)) (not (eq (current-indentation) 0))))))
-	        (when (< curindent 0)
-	          (setq curindent 0))))
-      (let (fix)
-        (if (> (vpr-count-braces) 0)
-	          (setq fix -1)
-          (if (and (< (vpr-count-braces) 0) (not (vpr-only-braces)))
-              (setq fix +1)
-	          (setq fix 0)))
-        (indent-line-to (* (+ curindent fix) vpr-default-tab-width)))))
-  (let ((pos (point))
-        begpos)
-    (save-excursion
-      (beginning-of-line)
-      (setq begpos (point)))
-    (when (equal pos begpos)
-      (skip-syntax-forward "\s"))))
+    (beginning-of-line)
+    (let* ((cur-l (thing-at-point 'line t))
+           (state (syntax-ppss))
+           (indent-depth (- (+ (car state) (vpr-part-of-spec cur-l))
+                            (vpr-only-closing-braces cur-l))))
+      (indent-line-to (* indent-depth vpr-default-tab-width))))
+  (when (string-match-p "^[\t ]+$" (thing-at-point 'line t))
+    (end-of-line)))
 
 (defun vpr-brace-and-indent ()
   "Insert a closing brace and indent line."
@@ -842,6 +848,7 @@
   "vpr mode"
   "Major mode for editing Viper"
   :syntax-table vpr-syntax-table
+  (setq vpr-font-lock-keywords (vpr-build-keywords))
   (setq font-lock-defaults '((vpr-font-lock-keywords)))
   (setq-local indent-line-function #'vpr-indent-line)
   (setq-local prettify-symbols-alist vpr-pretty-symbols)
