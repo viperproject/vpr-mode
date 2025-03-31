@@ -160,7 +160,7 @@
       (,vpr-keywords-regexp . font-lock-keyword-face)
       ("\\(\\_<forall\\_>\\).*?::"
        (1 (compose-region (match-beginning 1) (match-end 1) ?∀))
-       (1 font-builtin-face append))
+       (1 font-lock-builtin-face append))
       ("\\(-\\)\\(-\\)\\(*\\)"
        (1 (compose-region (match-beginning 1) (match-end 1) ?‒))
        (1 (compose-region (match-beginning 2) (match-end 2) ?‒))
