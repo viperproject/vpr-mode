@@ -513,6 +513,7 @@
     ("enableMoreCompleteExhale" . "Enable a more complete exhale version.")
     ("enablePredicateTriggersOnInhale" . "Emit predicate-based function trigger on each inhale of a predicate instance (context: heap-dependent functions).")
     ("excludeMethods" . "Exclude methods from verification (default: ''). Is applied after the include pattern.")
+    ("reportUnsatCore" . "For every check, retrieve the unsat core if it was proven successfully.")
     ("handlePureConjunctsIndividually" . "Handle pure conjunction individually.Increases precision of error reporting, but may slow down verification.")
     ("includeMethods" . "Include methods in verification (default: '*'). Wildcard characters are '?' and '*'.")
     ("logConfig" . "Path to config file specifying SymbExLogger options")
