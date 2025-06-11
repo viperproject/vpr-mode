@@ -116,6 +116,7 @@
                          "import"
                          "function"
                          "predicate"
+                         "define"
                          "field"
                          "if"
                          "else"
