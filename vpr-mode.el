@@ -137,25 +137,27 @@
                        "ensures"
                        "fold"
                        "unfold"
-                       "inhale"
-                       "assume"
-                       "exhale"
-                       "assert"
                        "unfolding"
                        "in"
                        "forperm"
                        "package"
                        "decreases"))
+         (vpr-asserts '("exhale"
+                        "inhale"
+                        "assume"
+                        "assert"
+                        "refute"))
          (vpr-functions '())
-         
          (vpr-keywords-regexp (regexp-opt vpr-keywords 'words))
          (vpr-type-regexp (regexp-opt vpr-types 'words))
          (vpr-constant-regexp (regexp-opt vpr-constants 'words))
          (vpr-event-regexp (regexp-opt vpr-events 'words))
+         (vpr-asserts-regexp (regexp-opt vpr-asserts 'words))
          (vpr-functions-regexp (regexp-opt vpr-functions 'words)))
     `((,vpr-type-regexp . font-lock-type-face)
       (,vpr-constant-regexp . font-lock-constant-face)
       (,vpr-event-regexp . font-lock-builtin-face)
+      (,vpr-asserts-regexp . font-lock-warning-face)
       (,vpr-functions-regexp . font-lock-function-name-face)
       (,vpr-keywords-regexp . font-lock-keyword-face)
       ("\\(\\_<forall\\_>\\).*?::"
